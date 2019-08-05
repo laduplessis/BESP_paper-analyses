@@ -1,0 +1,47 @@
+
+
+WARNING: RAxML is not checking sequences for duplicate seqs and sites with missing data!
+
+
+
+This is RAxML version 8.2.11 released by Alexandros Stamatakis on June 2017.
+
+With greatly appreciated code contributions by:
+Andre Aberer      (HITS)
+Simon Berger      (HITS)
+Alexey Kozlov     (HITS)
+Kassian Kobert    (HITS)
+David Dao         (KIT and HITS)
+Sarah Lutteropp   (KIT and HITS)
+Nick Pattengale   (Sandia)
+Wayne Pfeiffer    (SDSC)
+Akifumi S. Tanabe (NRIFS)
+Charlie Taylor    (UF)
+
+
+RAxML Bipartition Computation: Drawing support values from trees in file RAxML_bootstrap.HA_trim.GTR+G.RAPIDBS onto tree in file RAxML_bestTree.HA_trim.GTR+G
+
+
+RAxML was called as follows:
+
+raxmlHPC-PTHREADS-AVX -m GTRGAMMA -f b -z RAxML_bootstrap.HA_trim.GTR+G.RAPIDBS -t RAxML_bestTree.HA_trim.GTR+G -n HA_trim.GTR+G.tree 
+
+
+
+
+Found 1 tree in File RAxML_bestTree.HA_trim.GTR+G
+
+
+
+Found 100 trees in File RAxML_bootstrap.HA_trim.GTR+G.RAPIDBS
+
+
+
+Found 1 tree in File RAxML_bestTree.HA_trim.GTR+G
+
+
+
+Time for Computation of Bipartitions 0.117615
+Tree with bipartitions written to file:  /Users/user/Documents/Projects/PreferentialSkyline/results/initial_trees/H3N2_trim/RAxML_bipartitions.HA_trim.GTR+G.tree
+Tree with bipartitions as branch labels written to file:  /Users/user/Documents/Projects/PreferentialSkyline/results/initial_trees/H3N2_trim/RAxML_bipartitionsBranchLabels.HA_trim.GTR+G.tree
+Execution information file written to :  /Users/user/Documents/Projects/PreferentialSkyline/results/initial_trees/H3N2_trim/RAxML_info.HA_trim.GTR+G.tree

@@ -110,9 +110,9 @@ To make the simulations run faster reduce the number of replicates, or increase 
 			``` 
 3. **Run analyses:**
 	- Input:
-		- `HA.HKY+G+F.BESP40_12.xml`: BESP with 40 segments, 12 epochs and initial tree calculated above.
-		- `HA.HKY+G+F.BESP40_1.xml`: BESP with 40 segments, 1 epoch and initial tree calculated above.
-		- `HA.HKY+G+F.BSP40.xml`: BSP with 40 segments and initial tree calculated above.
+		- `results/H3N2/HA_trim/HA.HKY+G+F.BESP40_12.xml`: BESP with 40 segments, 12 epochs and initial tree calculated above.
+		- `results/H3N2/HA_trim/HA.HKY+G+F.BESP40_1.xml`: BESP with 40 segments, 1 epoch and initial tree calculated above.
+		- `results/H3N2/HA_trim/HA.HKY+G+F.BSP40.xml`: BSP with 40 segments and initial tree calculated above.
 	- Workflow: Run 7 chains for each XML file, starting from different seeds (this is best done on a remote server since it will take a long time to run):
  
 		```bash
@@ -133,5 +133,24 @@ To make the simulations run faster reduce the number of replicates, or increase 
 ## Case study 2: Steppe Bison
 
 1. **Raw data:**
+	- `data/Bison/bison_2013.fasta` and `data/Bison/bison_2013_taxa.csv`: Bison dataset from Gill _et al._ (2013) (152 sequences).
 2. **Run analyses:**
+	- Input:
+		- `results/Bison/Bison.HKY.BESP20_12.xml`: BESP with 20 segments and 12 epochs.
+		- `results/Bison/Bison.HKY.BESP20_1.xml`: BESP with 20 segments and 1 epoch.
+		- `results/Bison/Bison.HKY.BSP20.xml`: BSP with 20 segments.
+	- Workflow: Run 3 chains for each XML file, starting from different seeds:
+
+		```bash
+		mkdir output
+		for SEED in 125 126 127
+		do 
+			java -jar ../../../BEAST2_BESP.jar -overwrite -seed $SEED Bison.HKY.BSP20.xml > Bison.HKY.BSP20.${SEED}.out&
+			java -jar ../../../BEAST2_BESP.jar -overwrite -seed $SEED Bison.HKY.BESP20_1.xml > Bison.HKY.BESP20_1.${SEED}.out
+			java -jar ../../../BEAST2_BESP.jar -overwrite -seed $SEED Bison.HKY.BESP20_12.xml > Bison.HKY.BESP20_12.${SEED}.out
+		done		
+		```
+
+	- Output:
+		- `results/Bison/output/`
 3. **Check convergence and analyse results:**
