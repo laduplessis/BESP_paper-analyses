@@ -32,11 +32,11 @@ BEAST v2.5.0 with the BESP package installed. For now we just provide a `.jar` f
 ### Other R-packages
 These packages are developed by Louis du Plessis and not available on CRAN yet. These packages can be installed from Github using `devtools::install_github()`.
 
-- beastio: 
+- [beastio](https://github.com/laduplessis/beastio): 
 	- _R-package with functions for pre- and post-processing of BEAST and BEAST2 files (good for automating the functionality in Tracer or Logcombiner e.g. checking convergence in hundreds of replicates from a simulation study or combining many chains)._
-- rskylinetools: 
+- [rskylinetools](https://github.com/laduplessis/rskylinetools): 
 	- _R-package implementing function for gridding skylines (so this work doesn't need to be painstakingly done in Tracer)._
-- bdskytools: 
+- [bdskytools](https://github.com/laduplessis/bdskytools): 
 	- _R-package with functions for plotting skylines (and many other odds and ends). This package will be decommissioned in the near future and skylineplot functions integrated into rskylinetools)_
 
 
@@ -48,9 +48,11 @@ These packages are developed by Louis du Plessis and not available on CRAN yet. 
 
 Simulate 100 replicate trees under a density-defined (linear preferential sampling) protocol and a frequency-defined (constant number of samples per epoch) protocol with 8 and 24 sampling epochs. Trees are simulated under five demographic scenarios (1) constant-size, (2) bottleneck, (3) boom-bust, (4) cyclical boom-bust and (5) logistic growth and decline. 
 
-XML files are then created for each simulated tree and run in BEAST2 (only for frequency-defined sampling with 24 epochs). Finally, analyses are checked for convergence and summary statistics are computed in R. The results report contains some plots from example analyses, but plots for every replicate are stored in `results/`. Runs where the automatic check for convergence failed can be checked in Tracer (the ESS calculation is slightly different in coda to Tracer).
+XML files are then created for each simulated tree and run in BEAST2. Finally, analyses are checked for convergence and summary statistics are computed in R. The results report contains some plots from example analyses, but plots for every replicate are stored in `results/`. Runs where the automatic check for convergence failed can be checked in Tracer (the ESS calculation is slightly different in coda to Tracer).
 
 To make the simulations run faster reduce the number of replicates, or increase the lower bound on the population size used to simulate coalescent trees (`SimUtils.R`, line 78). Keep in mind that if the lower bound is too high the demographic function for each simulated tree will turn into a constant-size coalescent once this bound is reached.
+
+To save space we only provide XML files and output figures for the 24-epoch BESP results and only figures on a log-scale, cut off at the most ancient sample. The output workflows for the 8-epoch BESP and the single-epoch BESP (linear preferential sampling) are provided for comparison (but are not presented in the paper).
 
 1. **Simulate trees:** 
 	- _Input:_ N/A

@@ -1,4 +1,5 @@
 ---
+title: "Simulation Results: Epoch linear preferential sampling (24 epochs - 2 months/epoch)"
 author: "Louis du Plessis"
 date: '`r format(Sys.time(), "Last modified: %d %b %Y")`'
 output:
