@@ -1,0 +1,215 @@
+---
+title: "Tree simulations"
+author: "Louis du Plessis"
+date: \today
+fontsize: 10pt
+output:
+  pdf_document:
+    toc: true
+    toc_depth: 3
+    number_sections: true
+    keep_tex: false
+    fig_crop: false
+---
+
+
+```{r rsetup, echo=FALSE, warning=FALSE, message=FALSE, results='hide'}
+
+    library(phylodyn)
+    source("../scripts/palettes.R")
+    source("../scripts/SimUtils.R")
+
+    # Global settings
+    nreplicates <- 100
+    samp_start  <- 0
+    samp_end    <- 48
+    nlimit      <- 10
+    nrsamples   <- 500
+    outputbase  <- "../results/simulations/"
+    
+    trajectories <- data.frame(row.names  =c("boombust","uniform","bottleneck","cyclic","logistic" ),
+                               names      =c("Boom-bust","Uniform","Bottleneck","Cyclical exponential growth","Cyclical logistic growth"),
+                               maxdensity = c(0.4, 0.05, 0.05, 0.05, 0.05),
+                               maxlineages= c(300, 100,  100,  100,  100))
+    
+```
+    
+    
+```{r plotfunctions, echo=FALSE, warning=FALSE, message=FALSE, results='hide'}
+
+    # Get the LTT through time and interpolate it to the grid
+    # if plot==TRUE add the original (not interpolated) LTT to the current plot
+    getLTT <- function(tree, grid, plot=TRUE, col=mPal(dark$blue,0.25)) {
+      ltt <- ltt.plot.coords(tree)
+      lttinterp <- approx(ltt[,1]*-1,ltt[,2], xout=grid, method='constant', rule=2)
+      if (plot) {
+          lines(ltt[,1]*-1, ltt[,2], col=col, type='S')
+      }
+      return(lttinterp$y)
+    }
+    
+    
+    # Get 95% CI + median of a par of the simulations (e.g. coal_times or samp_times)
+    # if plot==TRUE add the CI and median line to the current plot
+    # ... is the parameters to be passed to the kernel density estimator (from, to, bw etc.)
+    getCI <- function(sims, par, plot=TRUE, col=dark$blue, fill=mPal(dark$blue,0.5), ...) {
+      
+      densities   <- lapply(sims, function(x) density(x[[par]], ...))
+      densities_y <- sapply(densities, function(d) d$y)
+      par_ci      <- apply(densities_y, 1, quantile, probs=c(0.025, 0.5, 0.975))
+      
+      if (plot) {
+          polygon(c(densities[[1]]$x, rev(densities[[1]]$x)), c(par_ci[1,],rev(par_ci[3,])), border=NA, col=fill)
+          lines(densities[[1]]$x,par_ci[2,],col=col)
+      }
+      
+      return(par_ci)
+    }
+    
+    plotPointProcess <- function(sim, par, col=dark$blue) {
+      
+      axis(1,lwd=0,lwd.ticks=1)
+      abline(h=0)
+      
+      abline(v=sim[[par]], col=col)
+      abline(v=max(sim[[par]]), lty=3)
+      points(sim[[par]], rep(1,length(sim[[par]])), pch=20, col=col)
+    }
+    
+    
+    summariseSims <- function(sims, maxdensity=0.05, maxlineages=100) {
+      
+      #maxtime   <- median(sapply(sims, function(x) max(x$coal_times, x$samp_times)))
+      maxtime <- max(sims[[1]]$coal_times)
+      
+      #layout(matrix(1:4, nrow=2, byrow=TRUE))
+      layout(matrix(c(1,2,3,4,5,4,6,4),byrow=TRUE,ncol=2),heights=c(0.5,0.5,0.2,0.2))
+      par(mar=c(5,4,2,5)+0.1)
+      plot(sims[[1]]$trajgrid[,1], sims[[1]]$trajgrid[,2], type='l', lwd=2,
+           xlim=c(0,maxtime), xlab="Time", ylab=expression("Population size - N"[e]), las=1)
+      abline(v=(sims[[1]]$samp_end), lty=3, lwd=1)
+      
+      if (!is.na(sims[[1]]$samp_intensity)) {
+          par(new=TRUE)
+          epoch_times <- seq(sims[[1]]$samp_start, sims[[1]]$samp_end, length.out=(sims[[1]]$nrepochs+1))
+          plot(epoch_times, c(sims[[1]]$samp_intensity[1], sims[[1]]$samp_intensity), type='S', col=dark$red, lty=1, lwd=2,
+               xlim=c(0,maxtime), ylim=c(0,max(sims[[1]]$samp_intensity)*1.25), btw='n', axes=FALSE, xlab="", ylab="")
+          axis(4,las=1)
+          mtext(expression("Sampling intensity -"~beta), side=4, line=2, cex=0.7)
+          legend('top', inset=c(0,-0.1), horiz=TRUE, legend=c(expression("True N"[e]), expression("True"~beta)), col=c(dark$black, dark$red), lty=1, lwd=2, bty='n', xpd=TRUE)
+      }
+      
+      plot(1,type='n', xlim=c(0,maxtime),ylim=c(0,maxlineages), xlab="Time", ylab="LTT (95% CI)", las=1)
+      timegrid <- seq(0,maxtime,length.out=100)
+      ltt_y    <- sapply(sims, function(x) getLTT(x$phylo, timegrid, col=mPal(dark$blue,0.1)))
+      ltt_ci   <- apply(ltt_y, 1, quantile, probs=c(0.025, 0.5, 0.975))
+      lines(timegrid, ltt_ci[1,], lty=2, col=dark$red)
+      lines(timegrid, ltt_ci[2,], lty=1, col=dark$red)
+      lines(timegrid, ltt_ci[3,], lty=2, col=dark$red)
+    
+      plot(1,type='n',xlim=c(0,maxtime), ylim=c(0,maxdensity), xlab="Time", ylab="Density (95% CI)", las=1)
+      samp_time_ci <- getCI(sims, par="samp_times", to=maxtime, bw=1, col=dark$red, fill=mPal(dark$red,0.5))
+      coal_time_ci <- getCI(sims, "coal_times", to=maxtime, bw=1, col=dark$blue, fill=mPal(dark$blue,0.5))
+      legend('topright', legend=c("Coalescent events","Sampling events"), border=c(dark$blue, dark$red), fill=c(mPal(dark$blue,0.5), mPal(dark$red,0.5)),bty='n')
+    
+      plot(ladderize(sims[[1]]$phylo),  show.tip.label=FALSE, edge.width=0.5, direction="leftwards")
+      mtext(side=1,"Example tree", cex=0.8)
+      #phyloplot <- ggtree(sims[[1]]$phylo,right=TRUE, lwd=0.5, ladderize=TRUE) + scale_x_reverse()
+      #plot(phyloplot, newpage=FALSE)
+      
+      plot(1,type='n', xlim=c(0,maxtime), ylim=c(0,1.1), xlab="Sampling events (example)",ylab="",las=1, bty='n', axes=FALSE)
+      plotPointProcess(sims[[1]], "samp_times", col=mPal(dark$red,0.25))
+      
+      plot(1,type='n', xlim=c(0,maxtime), ylim=c(0,1.1), xlab="Coalescent events (example)",ylab="",las=1, bty='n', axes=FALSE)
+      plotPointProcess(sims[[1]], "coal_times", col=mPal(dark$blue,0.25))
+      
+    }
+
+```
+
+
+
+# Constant linear preferential sampling
+
+```{r linear_constant, echo=FALSE, warning=FALSE, message=FALSE, results='asis', fig.width=8, fig.height=8, fig.path=paste0(outputbase,"figs/"), eval=TRUE}
+
+set.seed(9)
+outputpath <- paste0(outputbase,"linear_constant/")
+for (i in 1:nrow(trajectories)) {
+  
+  trajname <- rownames(trajectories)[i]
+  cat(paste0("## ",trajectories$names[i],"\n"))
+  
+  traj <- lapply(rep(trajname, nreplicates), get_trajectory)
+  sims <- lapply(traj, simulate_genealogy, samp_type="preferential", nrsamples=nrsamples, samp_start=samp_start, samp_end=samp_end, nlimit=nlimit)
+  sims <- save_simulation(sims, basename=trajname, path=paste0(outputpath,trajname,"/"), RData=TRUE, csv=TRUE, newick=TRUE, json=TRUE)
+  summariseSims(sims, maxdensity=trajectories$maxdensity[i], maxlineages=trajectories$maxlineages[i])
+  nrSampleMean <- mean(sapply(sims, function(x) x$nrsamples))
+  nrSampleSD   <- sd(sapply(sims, function(x) x$nrsamples))
+  title(sub=paste0("Nr. replicates: ",nreplicates, ", Nr. samples: ",nrSampleMean,"+-",nrSampleSD, 
+                   ", Sampling period: [",samp_start,",",sims[[1]]$samp_end + sims[[1]]$timeshift,"]"), outer=TRUE, line=-1.0)
+  
+  cat("\n \\clearpage \n \n")
+}
+
+
+```
+
+# Epoch linear preferential sampling (24 epochs - 2 months/epoch)
+
+```{r linear_epoch_24, echo=FALSE, warning=FALSE, message=FALSE, results='asis', fig.width=8, fig.height=8, fig.path=paste0(outputbase,"figs/"), eval=TRUE}
+
+set.seed(9)
+outputpath <- paste0(outputbase,"linear_epoch_24/")
+for (i in 1:nrow(trajectories)) {
+  
+  trajname <- rownames(trajectories)[i]
+  cat(paste0("## ",trajectories$names[i],"\n"))
+  
+  traj <- lapply(rep(trajname, nreplicates), get_trajectory)
+  sims <- lapply(traj, simulate_genealogy, samp_type="preferential", nrsamples=nrsamples, samp_start=samp_start, samp_end=samp_end, nlimit=nlimit, nrepochs=24)
+  sims <- save_simulation(sims, basename=trajname, path=paste0(outputpath,trajname,"/"), RData=TRUE, csv=TRUE, newick=TRUE, json=TRUE)
+  summariseSims(sims, maxdensity=trajectories$maxdensity[i], maxlineages=trajectories$maxlineages[i])
+  nrSampleMean <- mean(sapply(sims, function(x) x$nrsamples))
+  nrSampleSD   <- sd(sapply(sims, function(x) x$nrsamples))
+  title(sub=paste0("Nr. replicates: ",nreplicates, ", Nr. samples: ",nrSampleMean,"+-",nrSampleSD, 
+                   ", Sampling period: [",samp_start,",",sims[[1]]$samp_end + sims[[1]]$timeshift,"]"), outer=TRUE, line=-1.0)
+  
+  cat("\n \\clearpage \n \n")
+}
+
+
+```
+
+
+
+# Epoch linear preferential sampling (8 epochs - 6 months/epoch)
+
+```{r linear_epoch_8, echo=FALSE, warning=FALSE, message=FALSE, results='asis', fig.width=8, fig.height=8, fig.path=paste0(outputbase,"figs/"), eval=TRUE}
+
+set.seed(9)
+outputpath <- paste0(outputbase,"linear_epoch_8/")
+for (i in 1:nrow(trajectories)) {
+  
+  trajname <- rownames(trajectories)[i]
+  cat(paste0("## ",trajectories$names[i],"\n"))
+  
+  traj <- lapply(rep(trajname, nreplicates), get_trajectory)
+  sims <- lapply(traj, simulate_genealogy, samp_type="preferential", nrsamples=nrsamples, samp_start=samp_start, samp_end=samp_end, nlimit=nlimit, nrepochs=8)
+  sims <- save_simulation(sims, basename=trajname, path=paste0(outputpath,trajname,"/"), RData=TRUE, csv=TRUE, newick=TRUE, json=TRUE)
+  summariseSims(sims, maxdensity=trajectories$maxdensity[i], maxlineages=trajectories$maxlineages[i])
+  nrSampleMean <- mean(sapply(sims, function(x) x$nrsamples))
+  nrSampleSD   <- sd(sapply(sims, function(x) x$nrsamples))
+  title(sub=paste0("Nr. replicates: ",nreplicates, ", Nr. samples: ",nrSampleMean,"+-",nrSampleSD, 
+                   ", Sampling period: [",samp_start,",",sims[[1]]$samp_end + sims[[1]]$timeshift,"]"), outer=TRUE, line=-1.0)  
+  cat("\n \\clearpage \n \n")
+}
+
+
+```
+
+# Session info
+
+```{r sessionInfo}
+    sessionInfo()
+```

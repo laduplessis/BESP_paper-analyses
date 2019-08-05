@@ -1,0 +1,185 @@
+---
+author: "Louis du Plessis"
+date: '`r format(Sys.time(), "Last modified: %d %b %Y")`'
+output:
+  pdf_document:
+      toc: true
+      toc_depth: 3
+      number_sections: true
+      keep_tex: false
+      fig_crop: false
+layout: page
+editor_options: 
+  chunk_output_type: inline
+---
+
+  
+  
+```{r rsetup, echo=FALSE, message=FALSE, results='hide', warning=FALSE}
+
+rm(list = ls()) 
+
+library(bdskytools)
+library(phylodyn)
+library(beastio)
+library(coda)
+source("../scripts/palettes.R")
+source("../scripts/SimUtils.R")
+source("../scripts/SimResultUtils.R")
+
+knitr::opts_chunk$set(tidy=FALSE, cache=FALSE,
+                      dev="pdf",
+                      message=FALSE, error=FALSE, warning=FALSE, echo=FALSE)
+
+trajectories <- data.frame(row.names  =c("uniform", "bottleneck", "boombust","cyclic","logistic" ),
+                           names      =c("Constant-size", "Bottleneck","Boom-bust", "Cyclical boom-bust","Logistic growth and decline"),
+                           shortnames =c("Constant", "Bottleneck","Boom-bust", "Cyclical","Logistic" ))
+
+ESSlimit <- 200
+simname  <- "linear_epoch_24"
+replicates <- 0:99
+
+
+```
+
+\clearpage
+
+# Convergence
+
+```{r getstats, results='asis', cache=TRUE}
+
+popmad <- popmciw <- popcov <- list()   
+sampmad <- sampmciw <- sampcov <- list()  
+for (i in 1:nrow(trajectories)) {  
+  
+  trajname <- rownames(trajectories)[i]
+  cat(paste0("## ",trajectories$names[i],"\n"))   
+  
+  simpath <- paste0("../results/simulations/", simname, "/", trajname, "/") 
+  logpath <- paste0("../results/simulation_results/", simname, "/", trajname, "/")  
+  
+  # Load simulation        
+  load(paste0(simpath, trajname, ".RData")) 
+        
+  # Load logfiles and check convergence
+  logfiles   <- paste0("prefbsp.fixedtree.fixedgroups.", simname, ".", trajname, ".T", replicates, ".log")
+  mcmc.trace <- readLog(paste0(logpath,logfiles), burnin=0.1)
+     
+  converged <- sapply(mcmc.trace, checkESSl, cutoff=ESSlimit)
+  cat(paste0(sum(converged),"/",length(converged)," simulations converged with ESS of all parameters > ", ESSlimit, ".\n\n"))
+  if (!all(converged)) {
+    cat("Did not converge:\n\n")       
+    cat(paste(" -", sapply(strsplit(names(converged[converged == FALSE]), "/"), function(x) x[length(x)]), "\n"))
+  }
+    
+  # Extract parameters from traces
+  popSizes           <- getLogFileSubset(mcmc.trace, "PopSizes")   
+  popSizeTimes       <- getLogFileSubset(mcmc.trace, "PopSizeChangeTimes")[1, ]
+  sampIntensities    <- getLogFileSubset(mcmc.trace, "SamplingIntensity")
+  sampIntensityTimes <- getLogFileSubset(mcmc.trace, "samplingIntensityChangeTimes")[1, ]
+     
+  # Get summary statistics
+  trajstatsFull <- getStats(simresult, popSizes, sampIntensities, popSizeTimes, sampIntensityTimes, outputpath=logpath, cutPopSizes=FALSE)
+  trajstats     <- getStats(simresult, popSizes, sampIntensities, popSizeTimes, sampIntensityTimes, outputpath=logpath, cutPopSizes=TRUE, plotResults=FALSE)
+  
+  popmad[[trajname]]  <- trajstats$popSizeStats$rel.weighted.bias
+  popmciw[[trajname]] <- trajstats$popSizeStats$rel.weighted.mciw
+  popcov[[trajname]]  <- trajstats$popSizeStats$weighted.meancov  
+     
+  sampmad[[trajname]]  <- trajstats$sampIntensityStats$rel.weighted.bias
+  sampmciw[[trajname]] <- trajstats$sampIntensityStats$rel.weighted.mciw
+  sampcov[[trajname]]  <- trajstats$sampIntensityStats$weighted.meancov 
+  
+  cat("\n\n\n")
+}  
+
+
+```
+
+
+# Summary statistics
+
+```{r simulation-summary, fig.width=7, fig.height=7, fig.cap="Boxplots and stripcharts displaying measures of the statistical performance of the BESP, evaluated on trees simulated under five different demographic models (constant, bottleneck, boom-bust, cyclical boom-bust, logistic growth and decline). We simulated 100 replicate trees for each scenario. Three measures of estimator performance are shown (A) mean relative bias, (B) mean relative HPD interval size, and (C) mean coverage. The left and right columns illustrate estimation performance for effective population size (N) and sampling intensity (beta), respectively."}    
+
+nrX <- -0.22*length(popmad)
+
+# Boxplots    
+par(mar=c(3,6,3,0)+0.1) 
+layout(matrix(1:6, nrow=3, byrow=FALSE))
+plotStats(popmad, "Mean relative bias", names=NA, ylim=c(-0.4,0.4))
+#abline(h=0, col=mPal(oxCols$red2), lty=2, lwd=2)
+mtext(side=3, text=expression("N"), line = 0.5, cex=1.2)
+mtext("A", side=3, line=-1, at=nrX, cex=1.5)
+
+
+par(mar=c(4.5,6,1.5,0)+0.1) 
+plotStats(popmciw,"Mean relative\nHPD interval width", names=NA, ylim=c(0,3))
+#abline(h=2*qnorm(0.975), col=mPal(oxCols$red2), lty=2, lwd=2)
+mtext("B", side=3, line=-1, at=nrX, cex=1.5)
+
+par(mar=c(6,6,0,0)+0.1) 
+plotStats(popcov, "Mean coverage", names=NA, las=1, ylim=c(0,1)) 
+text(x=1:5, y=-0.25, srt=45, labels=trajectories$shortnames, xpd=TRUE, cex=1.2)
+mtext("C", side=3, line=-1, at=nrX, cex=1.5)
+
+
+par(mar=c(3,6,3,0)+0.1) 
+plotStats(sampmad,  names=NA, ylim=c(-0.4,0.4))
+#abline(h=0, col=mPal(oxCols$red2), lty=2, lwd=2)
+mtext(side=3, text=expression(beta), line = 0.5, cex=1.2)
+
+par(mar=c(4.5,6,1.5,0)+0.1) 
+plotStats(sampmciw, names=NA, ylim=c(0,3))
+#abline(h=2*qnorm(0.975), col=mPal(oxCols$red2), lty=2, lwd=2)
+
+par(mar=c(6,6,0,0)+0.1) 
+plotStats(sampcov,  names=NA, las=1, ylim=c(0,1))
+text(x=1:5, y=-0.25, srt=45, labels=trajectories$shortnames, xpd=TRUE, cex=1.2)
+
+
+
+```
+
+\clearpage
+
+# Example results
+
+```{r examples, results='asis', eval=TRUE}
+
+caption <- "(A) Simulated tree with sampling (blue) and coalescent (grey) events. (B) Median (solid black line) and HPD intervals (shaded areas) for the N-estimates between the most recent and most ancient samples. The dashed green line shows the true N-trajectory used to simulate the tree and the red line the harmonic mean of the true N during each segment.	(C) Median (solid black line) and HPD intervals (shaded areas) for the sampling intensity (beta) estimates for each epoch. The red line shows the true beta used to simulate the tree."
+
+cat("\\clearpage \n\n")
+for (i in 1:nrow(trajectories)) {  
+  
+  trajname <- rownames(trajectories)[i]
+  logpath  <- paste0("../results/simulation_results/", simname, "/", trajname, "/")
+  
+  #cat(paste0("## ",trajectories$names[i],"\n\n"))     
+  
+  # Plot 3 example figures (average, best, worst)
+  
+  rankstats <- data.frame(pmad =  popmad[[trajname]], pmciw =  popmciw[[trajname]], pcov = (1- popcov[[trajname]]),
+                          smad = sampmad[[trajname]], smciw = sampmciw[[trajname]], scov = (1-sampcov[[trajname]]))
+  ranking   <- rank(apply(apply(rankstats, 2, rank), 1, sum))
+  
+  best   <- (which(ranking == min(ranking))-1)
+  median <- (min(which(ranking >= 50))-1)
+  worst  <- (which(ranking == max(ranking))-1)
+  #cat(paste(best, median, worst, "\n\n"))
+  cat(paste0("![**", trajectories$shortnames[i], "** (best ranked simulation): ",caption,"](",   logpath, "figures-short-log/prefbsp.fixedtree.fixedgroups.", simname, ".", trajname,".T", best, ".pdf)\n\n"))
+  cat(paste0("![**", trajectories$shortnames[i], "** (median ranked simulation): ",caption,"](", logpath, "figures-short-log/prefbsp.fixedtree.fixedgroups.", simname, ".", trajname,".T", median, ".pdf)\n\n"))
+  cat(paste0("![**", trajectories$shortnames[i], "** (worst ranked simulation): ",caption,"](",  logpath, "figures-short-log/prefbsp.fixedtree.fixedgroups.", simname, ".", trajname,".T", worst, ".pdf)\n\n"))
+  
+  cat("\\clearpage \n\n")
+  
+}
+cat("\\clearpage \n\n")
+
+```
+
+
+# Session info
+
+```{r sessionInfo}
+    sessionInfo()
+```
