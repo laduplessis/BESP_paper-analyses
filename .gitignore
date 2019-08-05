@@ -1,0 +1,6 @@
+.DS_Store
+.Rhistory
+*.log
+__pycache__
+*_files/
+*_cache/
