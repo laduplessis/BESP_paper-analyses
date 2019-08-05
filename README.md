@@ -6,12 +6,21 @@
 
 This repository contains the raw data, configuration files and scripts necessary to reproduce the BESP analyses presented in [https://www.biorxiv.org/content/10.1101/686378v1.abstract](https://www.biorxiv.org/content/10.1101/686378v1.abstract). Some of the scripts may need some adjustment depending on the local setup. 
 
-## Abstract
+### Abstract
 
 _Estimating past population dynamics from molecular sequences that have been sampled through time is an important problem in infectious disease epidemiology, molecular ecology and macroevolution. Popular solutions, such as the skyline and skygrid approaches, infer past effective population sizes from the coalescent event times of phylogenies reconstructed from longitudinally sampled sequences. These methods assume that sequence sampling times are uninformative about population size dynamics. Recent work has started to question this assumption by exploring how sample time information can aid coalescent inference. Here we develop, investigate, and implement a new skyline method, termed the epoch sampling skyline plot (ESP), to jointly estimate the dynamics of population size and sampling rate through time. The ESP is inspired by real-world data collection practices. It comprises a flexible model in which the sequence sampling rate is proportional to the population size within an epoch, but can change discontinuously between epochs. We show that the ESP achieves accurate estimates under several realistic sampling protocols and we prove analytically that it can at least double the best precision attainable by standard approaches. We generalise the ESP to incorporate phylogenetic uncertainty in a new Bayesian package (BESP) in BEAST2. We further examine two well-studied empirical datasets from virus epidemiology and macroevolution. We find that the BESP improves upon previous coalescent estimators and generates new and biologically-useful insights into the sampling protocols underpinning these empirical datasets. Sequence sampling times  comprise a rich source of information for coalescent inference  that will become increasingly important as sequence collection intensifies and becomes more formalised._
 
 
 ## Dependencies
+
+### BEAST2
+BEAST v2.5.0 with the BESP package installed. For now we just provide a `.jar` file on this repository until the package is ready to be released. 
+
+### Python
+- numpy
+- yaml
+- BioPython
+- TreeTime
 
 ### CRAN R-packages
 - ape
@@ -21,23 +30,21 @@ _Estimating past population dynamics from molecular sequences that have been sam
 - TreeSim
 
 ### Other R-packages
-- beastio
-- rskylinetools
-- bdskytools
+These packages are developed by Louis du Plessis and not available on CRAN yet. These packages can be installed from Github using `devtools::install_github()`.
 
-
-### Python
-- numpy
-- yaml
-- BioPython
-- TreeTime
-
-### BEAST2
-BEAST v2.5.0 with the BESP package installed. For now we just provide a `.jar` file on this repository until the package is ready to be released. 
+- beastio: 
+	- _R-package with functions for pre- and post-processing of BEAST and BEAST2 files (good for automating the functionality in Tracer or Logcombiner e.g. checking convergence in hundreds of replicates from a simulation study or combining many chains)._
+- rskylinetools: 
+	- _R-package implementing function for gridding skylines (so this work doesn't need to be painstakingly done in Tracer)._
+- bdskytools: 
+	- _R-package with functions for plotting skylines (and many other odds and ends). This package will be decommissioned in the near future and skylineplot functions integrated into rskylinetools)_
 
 
 
-## Bayesian simulation study
+
+
+
+## Bayesian Simulation Study
 
 Simulate 100 replicate trees under a density-defined (linear preferential sampling) protocol and a frequency-defined (constant number of samples per epoch) protocol with 8 and 24 sampling epochs. Trees are simulated under five demographic scenarios (1) constant-size, (2) bottleneck, (3) boom-bust, (4) cyclical boom-bust and (5) logistic growth and decline. 
 
@@ -46,44 +53,44 @@ XML files are then created for each simulated tree and run in BEAST2 (only for f
 To make the simulations run faster reduce the number of replicates, or increase the lower bound on the population size used to simulate coalescent trees (`SimUtils.R`, line 78). Keep in mind that if the lower bound is too high the demographic function for each simulated tree will turn into a constant-size coalescent once this bound is reached.
 
 1. **Simulate trees:** 
-	- Input: 
-		- _N/A_
-	- Scripts: 
+	- _Input:_ N/A
+	- _Scripts:_ 
 		- `scripts/palettes.R`
 		- `scripts/SimUtils.R`
-	- Workflow: 
-		- `workflows:simulate_trees.Rmd`	
-	- Output: 
+	- _Workflow:_  `workflows:simulate_trees.Rmd`	
+	- _Output:_ 
 		- `results/simulations/`: Stored in `.RData`, `.csv`, `.trees` and `.json` files. _(Only the `.trees` and `.json` files are uploaded on the repository)._
 2. **Create XML files:** 
-	- Input: 
+	- _Input:_
 		- `templates/`: Template BEAST2 XML files for fixed tree analyses with the BESP with placeholders for data and parameters. 
 		- `results/simulation_results/linear_epoch_24/config/:` Configuration files for the five different demographic scenarios.
-	- Scripts: 
+	- _Scripts:_ 
  		- `scripts/beastutils.py`
 		- `scripts/MakeBEASTXML.py`
-	- Workflow:
-		- Run: `python MakeBEASTXML.py -i ../results/simulation_results/linear_epoch_24/config/` from `scripts/`
-	- Output:
+	- _Workflow:_ Run from `scripts/`
+	
+		```bash
+		python MakeBEASTXML.py -i ../results/simulation_results/linear_epoch_24/config/` 
+		```
+	- _Output:_
 		- `results/simulation_results/linear_epoch_24/`: XML files and bash script for running XML files.
 3. **Run simulation inferences:**
-	- Input: 
-		- `results/simulation_results/linear_epoch_24/`
-	- Workflow:
-		- Run the bash script in the directory of each of the demographic scenarios and provide the BEAST2 `.jar` file as the first argument.
-		- Or use GNU parallel to speed up the process if you have many cores, e.g. run: `ls *.xml | parallel --delay 1 --jobs 75% --results outdir -I% --max-args 1 java -jar ../../../../BEAST2_BESP.jar -overwrite -seed 127 % &` from `results/simulation_results/linear_epoch_24/bottleneck/` 
-	- Output:  
+	- _Input:_ `results/simulation_results/linear_epoch_24/`
+	- _Workflow:_ Run the bash script in the directory of each of the demographic scenarios and provide the BEAST2 `.jar` file as the first argument or use GNU parallel to speed up the process if you have many cores, e.g. run from the directory with the XML files: 
+
+		```bash
+		ls *.xml | parallel --delay 1 --jobs 75% --results outdir -I% --max-args 1 java -jar ../../../../BEAST2_BESP.jar -overwrite -seed 127 % &` from `results/simulation_results/linear_epoch_24/bottleneck/
+		```
+	- _Output:_  
 		- `results/simulation_results/linear_epoch_24/`: 
 4. **Check convergence and compute summary statistics:**
-	- Input: 
-		- `results/simulation_results/linear_epoch_24/`
-	- Scripts:
+	- _Input:_ `results/simulation_results/linear_epoch_24/`
+	- _Scripts:_
 		- `scripts/palettes.R`
 		- `scripts/SimUtils.R`
 		- `scripts/SimResultUtils.R`
-	- Workflow:
-		- `workflows/simulation_results_linear_epoch_24/`
-	- Output:
+	- _Workflow:_ `workflows/simulation_results_linear_epoch_24/`
+	- _Output:_ 
 		- `results/simulation_results/linear_epoch_24/`: Summary statistic are stored in `.csv` files (population size statistics are calculated from the present to the most ancient sample and from the present to the TMRCA). For each replicate 4 pdf figures are produced showing the results in real/log space and the results in real/log space cut off at the most ancient sample.
 
 
@@ -93,7 +100,8 @@ To make the simulations run faster reduce the number of replicates, or increase 
 	- `data/H3N2/HA.fas` and `data/H3N2/HA.csv`: Full HA dataset from Rambaut _et al._ (2008) (687 sequences). 
 	- `data/H3N2/HA_trim.fas` and `data/H3N2/HA_trim.csv`: HA dataset from Rambaut _et al._ (2008) with the first incomplete season removed (637 sequences).
 2. **Initial trees:**
-	- Workflow: Run from `results/initial_trees/H3N2_trim/`:
+	- _Input:_ `data/H3N2/`
+	- _Workflow:_ Run from `results/initial_trees/H3N2_trim/`:
 		1. RAxML tree with 10 random starts
 
 			```bash
@@ -114,11 +122,11 @@ To make the simulations run faster reduce the number of replicates, or increase 
 			treetime --aln ../../../data/H3N2/HA_trim.fas --tree RAxML_bipartitionsBranchLabels.HA_trim.GTR+G.tree --dates ../../../data/H3N2/HA_trim.csv --coalescent skyline --confidence --outdir treetime_HA
 			``` 
 3. **Run analyses:**
-	- Input:
+	- _Input:_
 		- `results/H3N2/HA_trim/HA.HKY+G+F.BESP40_12.xml`: BESP with 40 segments, 12 epochs and initial tree calculated above.
 		- `results/H3N2/HA_trim/HA.HKY+G+F.BESP40_1.xml`: BESP with 40 segments, 1 epoch and initial tree calculated above.
 		- `results/H3N2/HA_trim/HA.HKY+G+F.BSP40.xml`: BSP with 40 segments and initial tree calculated above.
-	- Workflow: Run 7 chains for each XML file, starting from different seeds (this is best done on a remote server since it will take a long time to run):
+	- _Workflow:_ Run 7 chains for each XML file, starting from different seeds (this is best done on a remote server since it will take a long time to run):
  
 		```bash
 		mkdir output
@@ -130,26 +138,23 @@ To make the simulations run faster reduce the number of replicates, or increase 
 		done
 		
 		```		
-	- Output:  
+	- _Output:_
 		- `results/H3N2/HA_trim/output/`
 5. **Check convergence and analyse results:**
-	- Input:
-		- `results/H3N2/HA_trim/output/`
-	- Workflow:
-		- `workflows/H3N2_trim_results.Rmd`
-	- Output:
-		- `workflows/H3N2_trim_results_files/figure-latex/`
+	- _Input:_ `results/H3N2/HA_trim/output/`
+	- _Workflow:_ `workflows/H3N2_trim_results.Rmd`
+	- _Output:_ `workflows/H3N2_trim_results_files/figure-latex/`
 
 ## Case study 2: Steppe Bison
 
 1. **Raw data:**
 	- `data/Bison/bison_2013.fasta` and `data/Bison/bison_2013_taxa.csv`: Bison dataset from Gill _et al._ (2013) (152 sequences).
 2. **Run analyses:**
-	- Input:
+	- _Input:_
 		- `results/Bison/Bison.HKY.BESP20_12.xml`: BESP with 20 segments and 12 epochs.
 		- `results/Bison/Bison.HKY.BESP20_1.xml`: BESP with 20 segments and 1 epoch.
 		- `results/Bison/Bison.HKY.BSP20.xml`: BSP with 20 segments.
-	- Workflow: Run 3 chains for each XML file, starting from different seeds:
+	- _Workflow:_ Run 3 chains for each XML file, starting from different seeds:
 
 		```bash
 		mkdir output
@@ -161,12 +166,9 @@ To make the simulations run faster reduce the number of replicates, or increase 
 		done		
 		```
 
-	- Output:
+	- _Output:_
 		- `results/Bison/output/`
 3. **Check convergence and analyse results:**
- 	- Input:
-		- `results/Bison/output/`
-	- Workflow:
-		- `workflows/bison_results.Rmd`
-	- Output:
-		- `workflows/bison_results_files/figure-latex/`
+ 	- _Input:_ `results/Bison/output/`
+	- _Workflow:_ `workflows/bison_results.Rmd`
+	- _Output:_ `workflows/bison_results_files/figure-latex/`
