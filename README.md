@@ -13,11 +13,16 @@ _Estimating past population dynamics from molecular sequences that have been sam
 
 ## Dependencies
 
-### R
+### CRAN R-packages
 - ape
 - coda
 - phylodyn
+- lubridate
+- TreeSim
+
+### Other R-packages
 - beastio
+- rskylinetools
 - bdskytools
 
 
@@ -128,7 +133,12 @@ To make the simulations run faster reduce the number of replicates, or increase 
 	- Output:  
 		- `results/H3N2/HA_trim/output/`
 5. **Check convergence and analyse results:**
-
+	- Input:
+		- `results/H3N2/HA_trim/output/`
+	- Workflow:
+		- `workflows/H3N2_trim_results.Rmd`
+	- Output:
+		- `workflows/H3N2_trim_results_files/figure-latex/`
 
 ## Case study 2: Steppe Bison
 
@@ -154,3 +164,9 @@ To make the simulations run faster reduce the number of replicates, or increase 
 	- Output:
 		- `results/Bison/output/`
 3. **Check convergence and analyse results:**
+ 	- Input:
+		- `results/Bison/output/`
+	- Workflow:
+		- `workflows/bison_results.Rmd`
+	- Output:
+		- `workflows/bison_results_files/figure-latex/`

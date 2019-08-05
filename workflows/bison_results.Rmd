@@ -1,0 +1,553 @@
+---
+title: "Bison results"
+author: "Louis du Plessis"
+date: '`r format(Sys.time(), "Last modified: %d %b %Y")`'
+output:
+  pdf_document:
+    toc: true
+    toc_depth: 3
+    number_sections: true
+    keep_tex: false
+    fig_crop: false
+layout: page
+editor_options: 
+  chunk_output_type: inline
+---
+
+```{r rsetup, echo=FALSE, message=FALSE, results='hide', warning=FALSE}
+
+    rm(list = ls())
+
+    library(bdskytools)
+    library(coda)
+    library(beastio)
+    library(rskylinetools)
+    library(ape)
+    library(TreeSim)
+    source("../scripts/palettes.R")
+    
+    knitr::opts_chunk$set(tidy=FALSE, cache=FALSE,
+                          dev="pdf",
+                          message=FALSE, error=FALSE, warning=FALSE, echo=FALSE)
+    
+    logpath   <- paste0("../results/Bison/output/")
+    seeds     <- c(125, 126, 127)
+    
+    burnin    <- 0.1
+    thinning  <- 3
+    ESSlimit  <- 200
+    gridSize  <- 200
+    gridTimes <- seq(0, 80000, length.out=gridSize)
+    
+```
+
+
+```{r functions}
+  
+  sciNotation <- function(x, digits = 1) {
+      if (length(x) > 1) {
+          return(append(sciNotation(x[1]), sciNotation(x[-1])))
+      }
+      if (!x) return(0)
+      exponent <- floor(log10(x))
+      base <- round(x / 10^exponent, digits)
+      if (base == 1) {
+          as.expression(substitute(10^exponent, list(exponent = exponent))) 
+      } else {
+          as.expression(substitute(base %*% 10^exponent, list(base = base, exponent = exponent)))
+      }
+  }
+
+  plotLogYAxis <- function(ylims, smallticks=TRUE) {
+  
+    explims <- floor(log10(ylims))
+    yticks <- 10^c(explims[1]:explims[2])
+    axis(2, at=log(yticks), labels=sciNotation(yticks), las=2, cex.axis=1.2)
+    
+    if (smallticks == TRUE) {
+        smallticks <- unlist(lapply(c((explims[1]-1):explims[2]), function(x) (2:9)*10^x))
+        axis(2, at=log(smallticks), labels=NA, tcl=-0.25, lwd=1)
+    }  
+  }
+
+
+  drawPlotAxes <- function(xticks, ylims, ylab, plotNr, plotShading=TRUE, plotXAxis=FALSE, plotYAxis=FALSE, sciNot=TRUE, mirror=FALSE) {
+    
+    plotXStart <- -0.025*diff(range(xticks))
+    
+    
+    if (mirror) {
+        xlims <- c(max(xticks), plotXStart)
+    } else {
+        xlims <- c(plotXStart, max(xticks))
+    }
+    
+    plot(1, type='n',  xlim=xlims, ylim=ylims, xaxs='i', yaxs='i', xlab="", ylab="", axes=FALSE)
+    mtext(side=2, text=ylab, line=ifelse(sciNot, 4.75, 3), cex.lab=1.5)
+    
+    if (plotShading) {
+        #for (i in seq(1,length(xticks),by=2)) {
+        #  rect((xticks[i]), ylims[1], (xticks[i+1]), ylims[2], col = mPal(oxCols$gray1,0.5), border=NA)
+        #}
+      
+        misStages <- c(11.7,12.9,14,29,57,71,82, 87, 96, 109, 123, 191)*1000
+        for (i in seq(1,length(misStages),by=2)) {
+            rect((misStages[i]), ylims[1], (misStages[i+1]), ylims[2], col = mPal(oxCols$gray1,0.5), border=NA)
+        }
+        #abline(v=c(26.5, 19)*1000, lty=3)
+        #abline(v=c(26.5, 19, 16, 14)*1000, lty=3)
+        
+        # LGM
+        rect(19000, ylims[1], 26500, ylims[2], col = mPal(oxCols$gray1), border=mPal(oxCols$gray1), angle=45, density=15)
+        rect(19000, ylims[1], 26500, ylims[2], col = mPal(oxCols$gray1), border=mPal(oxCols$gray1), angle=-45, density=15)
+        
+        # Human settlement
+        rect(16000, ylims[1], 14000, ylims[2], col = mPal(oxCols$gray1), border=mPal(oxCols$gray1), angle=45, density=15)
+        rect(16000, ylims[1], 14000, ylims[2], col = mPal(oxCols$gray1), border=mPal(oxCols$gray1), angle=-45, density=15)
+                
+        
+    }
+    rect(plotXStart, ylims[1], xticks[length(xticks)], ylims[2], xpd=TRUE)
+    #abline(v=xticks, lty=3, lwd=0.5)
+    #abline(h=axTicks(2), lty=3, lwd=0.5)
+  
+    nrX <- plotXStart - 0.12*(max(xticks)-plotXStart)
+    mtext(plotNr, side=3, line=-1.5, at=nrX, cex=1.5)
+    
+    if (plotYAxis) {
+        if (sciNot) {
+            axis(2, las=2, cex.axis=1.2, at=axTicks(2), labels=sciNotation(axTicks(2)))
+        } else {
+            axis(2, las=2, cex.axis=1.2, at=axTicks(2), labels=axTicks(2))
+        }
+    }
+    
+    if (plotXAxis) {
+        axis(1,at=pretty(xticks), las=1, cex.axis=1.2)
+    }
+  
+  }
+  
+
+
+```
+
+
+# Summary
+
+BESP results from analysing 152 bison mtDNA sequences sampled from the present to 55,182 before present (602bp).
+
+\clearpage
+
+# Combine chains and check convergence
+
+## BSP 20
+
+```{r convergence.BSP20, cache=TRUE, fig.width=3.5, fig.height=2}
+ 
+    model.BSP20    <- "Bison.HKY.BSP20"
+    logfiles.BSP20 <- paste0(logpath, model.BSP20, ".", seeds, ".log")   
+       
+    # Read and combine chains
+    mcmc.trace.BSP20 <- readLog(logfiles.BSP20, burnin=burnin)
+    mcmc.trace.BSP20 <- window(mcmc.trace.BSP20, thin=thinning*thin(mcmc.trace.BSP20)) 
+    mcmc.combined.BSP20 <- mcmc(as.matrix(mcmc.trace.BSP20, iters = FALSE, chains = FALSE))
+    
+    popSizes.BSP20        <- getLogFileSubset(mcmc.combined.BSP20, "bPopSizes") 
+    popSizeTimes.BSP20    <- getLogFileSubset(mcmc.combined.BSP20, "bPopSizeChangeTimes")
+    popSizesGridded.BSP20 <- mcmc(rskylinetools::reconstructBackwardSkylineSlow(popSizes.BSP20, popSizeTimes.BSP20, gridTimes))
+     
+    # Check convergence
+    par(mar=c(3,5,1,0)+0.1, cex=0.6)
+    mcmc.nonstat.BSP20     <- checkESS(mcmc.combined.BSP20,   cutoff=ESSlimit, ignored=c(varnames(mcmc.trace.BSP20)[27:nvar(mcmc.trace.BSP20)]), 
+                                           plot=TRUE, log='y', ylim=c(1,10000), title="General parameters", plot.grid=TRUE)
+    pop.nonstat.BSP20      <- checkESS(popSizes.BSP20, cutoff=ESSlimit, 
+                                           plot=TRUE, log='y', ylim=c(1,10000), title="PopSize parameters", plot.grid=TRUE)
+    popgrid.nonstat.BSP20  <- checkESS(popSizesGridded.BSP20, cutoff=ESSlimit, 
+                                           plot=TRUE, log='y', ylim=c(1,10000), title="Gridded PopSize parameters", plot.grid=TRUE) 
+    groups.nonstat.BSP20   <- checkESS(getLogFileSubset(mcmc.combined.BSP20, "bGroupSizes"), cutoff=ESSlimit,  
+                                           plot=TRUE, log='y', ylim=c(1,10000), title="GroupSize parameters", plot.grid=TRUE)
+
+```
+
+
+\clearpage
+
+## BESP 20/1
+
+```{r convergence.BESP20_1, cache=TRUE, fig.width=3.5, fig.height=2}
+
+    model.BESP20_1    <- "Bison.HKY.BESP20_1"
+    logfiles.BESP20_1 <- paste0(logpath, model.BESP20_1, ".", seeds, ".log") 
+     
+    # Read and combine chains
+    mcmc.trace.BESP20_1 <- readLog(logfiles.BESP20_1, burnin=burnin)
+    mcmc.trace.BESP20_1 <- window(mcmc.trace.BESP20_1, thin=thinning*thin(mcmc.trace.BESP20_1))
+    mcmc.combined.BESP20_1 <- mcmc(as.matrix(mcmc.trace.BESP20_1, iters = FALSE, chains = FALSE))  
+    
+    popSizes.BESP20_1        <- getLogFileSubset(mcmc.combined.BESP20_1, "bPopSizes")  
+    popSizeTimes.BESP20_1    <- getLogFileSubset(mcmc.combined.BESP20_1, "bPopSizeChangeTimes")
+    popSizesGridded.BESP20_1 <- mcmc(rskylinetools::reconstructBackwardSkylineSlow(popSizes.BESP20_1, popSizeTimes.BESP20_1, gridTimes)) 
+    
+    sampIntensities.BESP20_1    <- getLogFileSubset(mcmc.combined.BESP20_1, "bSamplingIntensity$")
+     
+    # Check convergence
+    par(mar=c(3,5,1,0)+0.1, cex=0.6)
+    mcmc.nonstat.BESP20_1     <- checkESS(mcmc.combined.BESP20_1,   cutoff=ESSlimit, ignored=c(varnames(mcmc.trace.BESP20_1)[27:(nvar(mcmc.trace.BESP20_1)-2)]), 
+                                           plot=TRUE, log='y', ylim=c(1,10000), title="General parameters", plot.grid=TRUE)
+    pop.nonstat.BESP20_1      <- checkESS(popSizes.BESP20_1, cutoff=ESSlimit, 
+                                           plot=TRUE, log='y', ylim=c(1,10000), title="PopSize parameters", plot.grid=TRUE)
+    popgrid.nonstat.BESP20_1  <- checkESS(popSizesGridded.BESP20_1, cutoff=ESSlimit, 
+                                           plot=TRUE, log='y', ylim=c(1,10000), title="Gridded PopSize parameters", plot.grid=TRUE)
+    groups.nonstat.BESP20_1   <- checkESS(getLogFileSubset(mcmc.combined.BESP20_1, "bGroupSizes"), cutoff=ESSlimit, 
+                                           plot=TRUE, log='y', ylim=c(1,10000), title="GroupSize parameters", plot.grid=TRUE)
+
+```
+
+
+\clearpage
+
+## BESP 20/12
+
+```{r convergence.BESP20_12, cache=TRUE, fig.width=3.5, fig.height=2}
+
+    model.BESP20_12    <- "Bison.HKY.BESP20_12"  
+    logfiles.BESP20_12 <- paste0(logpath, model.BESP20_12, ".", seeds, ".log")
+
+    # Read and combine chains
+    mcmc.trace.BESP20_12 <- readLog(logfiles.BESP20_12, burnin=burnin)
+    mcmc.trace.BESP20_12 <- window(mcmc.trace.BESP20_12, thin=thinning*thin(mcmc.trace.BESP20_12))
+    mcmc.combined.BESP20_12 <- mcmc(as.matrix(mcmc.trace.BESP20_12, iters = FALSE, chains = FALSE))
+     
+    popSizes.BESP20_12        <- getLogFileSubset(mcmc.combined.BESP20_12, "bPopSizes")   
+    popSizeTimes.BESP20_12    <- getLogFileSubset(mcmc.combined.BESP20_12, "bPopSizeChangeTimes")
+    popSizesGridded.BESP20_12 <- mcmc(rskylinetools::reconstructBackwardSkylineSlow(popSizes.BESP20_12, popSizeTimes.BESP20_12, gridTimes)) 
+    
+    sampIntensities.BESP20_12    <- getLogFileSubset(mcmc.combined.BESP20_12, "bSamplingIntensity\\.")
+    sampIntensityTimes.BESP20_12 <- getLogFileSubset(mcmc.combined.BESP20_12, "bSamplingIntensityChangeTimes")[1, ]
+    
+    # Check convergence
+    par(mar=c(3,5,1,0)+0.1, cex=0.6)
+    mcmc.nonstat.BESP20_12     <- checkESS(mcmc.combined.BESP20_12,   cutoff=ESSlimit, ignored=c(varnames(mcmc.trace.BESP20_12)[27:nvar(mcmc.trace.BESP20_12)]), 
+                                 plot=TRUE, log='y', ylim=c(1,10000), title="General parameters", plot.grid=TRUE)
+    pop.nonstat.BESP20_12      <- checkESS(popSizes.BESP20_12, cutoff=ESSlimit, 
+                                 plot=TRUE, log='y', ylim=c(1,10000), title="PopSize parameters", plot.grid=TRUE)
+    popgrid.nonstat.BESP20_12  <- checkESS(popSizesGridded.BESP20_12, cutoff=ESSlimit, 
+                                 plot=TRUE, log='y', ylim=c(1,10000), title="Gridded PopSize parameters", plot.grid=TRUE)
+    groups.nonstat.BESP20_12   <- checkESS(getLogFileSubset(mcmc.combined.BESP20_12, "bGroupSizes"), cutoff=ESSlimit, 
+                                 plot=TRUE, log='y', ylim=c(1,10000), title="GroupSize parameters", plot.grid=TRUE)
+    samp.nonstat.BESP20_12     <- checkESS(sampIntensities.BESP20_12, cutoff=ESSlimit,  
+                                 plot=TRUE, log='y', ylim=c(1,10000), title="Sampling intensity parameters", plot.grid=TRUE)
+    
+```
+
+
+## Convergence summary
+
+```{r} 
+
+    df <- data.frame(row.names        = c("BSP 20", "BESP 20/1", "BESP 20/12"), 
+                     pop.nonstat      = c(length(pop.nonstat.BSP20), length(pop.nonstat.BESP20_1), length(pop.nonstat.BESP20_12)), 
+                     pop.lowest       = c(min(pop.nonstat.BSP20), min(pop.nonstat.BESP20_1), min(pop.nonstat.BESP20_12)), 
+                     popgrid.nonstat  = c(length(popgrid.nonstat.BSP20), length(popgrid.nonstat.BESP20_1), length(popgrid.nonstat.BESP20_12)), 
+                     popgrid.lowest   = c(min(popgrid.nonstat.BSP20), min(popgrid.nonstat.BESP20_1), min(popgrid.nonstat.BESP20_12)), 
+                     other.nonstat    = c(length(mcmc.nonstat.BSP20), length(mcmc.nonstat.BESP20_1), length(c(mcmc.nonstat.BESP20_12, samp.nonstat.BESP20_12))), 
+                     other.lowest     = c(min(mcmc.nonstat.BSP20), min(mcmc.nonstat.BESP20_1), min(c(mcmc.nonstat.BESP20_12, samp.nonstat.BESP20_12))))
+  
+    knitr::kable(df, caption = "Number of nonstationary parameters and lowest ESS values for different models and subsets of parameters.")
+
+
+```
+
+
+# Figures
+
+
+```{r bison-results-BESP20_12-vs-BESP20_1-vs-BSP20, fig.width=10, fig.height=7, fig.cap="(A) Density of sequence sampling dates through time for the alignment of 152 bison mtDNA sequences that we used. Blue dots indicate stripcharts of individual samples for each sampling epoch. The height of the stripcharts are equal to the number of samples in each epoch. Small tick marks on the x-axis represent epoch times. Grey shading indicates cool periods in the Earth's climate (from the present: Younger Dryas, Marine Isotope Stages (MIS) 2, MIS 4). The two cross hatched areas delimit the time of the last glacial maximum (~26.5-19 ka BP) and approximate time of substantial human settlement of the Americas (~16-14 ka BP). (B) Median (solid/dotted line) and 95% highest posterior density (HPD) intervals (shaded areas) for the genetic diversity estimates (N_e*tau) through time. The BESP estimate is shown in blue and the BSP estimate in red. (C) Median (solid line/dotted line) and 95% HPD intervals (shaded areas) of the estimated sampling intensities (beta)  for each sampling epoch. The 12-epoch BESP estimates are in blue and a single-epoch (density-defined) estimate is in yellow."} 
+
+    popTimes  <- gridTimes
+    sampTimes <- c(0, sampIntensityTimes.BESP20_12)
+    
+    bison <- read.csv("../data/Bison/bison_2013_taxa.csv")
+    
+    bison$epoch <- rep(0,nrow(bison))
+    bison$epoch[bison$age <= sampTimes[2]] <- 1
+    for (i in 2:(length(sampTimes)-1)) {
+        bison$epoch[bison$age > sampTimes[i] & bison$age <= sampTimes[i+1]] <- i
+    }
+    
+    logPopSizesHPD.BSP20     <- t(getHPDMedian(log(popSizesGridded.BSP20)))
+    logPopSizesHPD.BESP20_1  <- t(getHPDMedian(log(popSizesGridded.BESP20_1)))
+    logPopSizesHPD.BESP20_12 <- t(getHPDMedian(log(popSizesGridded.BESP20_12)))
+    
+    logSampIntensityHPD.BESP20_1  <- getHPDMedian(log(mcmc.combined.BESP20_1[,"bSamplingIntensity"]))
+    logSampIntensityHPD.BESP20_12 <- t(getHPDMedian(log(sampIntensities.BESP20_12)))
+    
+    
+    #par(mfrow=c(3,1), mar=c(4,6,0,2)+0.1)
+    par(mfrow=c(3,1), mar=c(4,6,0.5,25)+0.1)
+    #xticks <- c(0,500, seq(5000,50000,by=5000),60000)
+    xticks <- c(sampTimes[c(1,2,5,7,13)], 80000)
+    
+    # Samples
+    
+        sampleMax <- 30
+        ylims     <- c(0, sampleMax)
+        scaling   <- ylims[2]/sampleMax   # = 1
+        
+        drawPlotAxes(xticks, ylims, ylab="Samples/epoch", plotNr="A", plotYAxis=TRUE, plotXAxis=TRUE, sciNot=FALSE) 
+        
+        # Plot samples
+        for (epoch in 1:max(bison$epoch)) {
+            ages  <- bison$age[bison$epoch == epoch]
+            n     <- length(ages)*scaling
+            
+            points(ages[1], n, pch=20, col=mPal(oxCols$blue1, 0.5))
+            ages <- ages[-1]
+            points(ages, jitter(rep(n/2,length(ages)), amount=max(0.05,n/2)), pch=20, col=mPal(oxCols$blue1, 0.5))
+            #text(x=as.numeric(strsplit(season, "-")[[1]][2]), y=max(25,n+10), labels = paste0("(",n,")"), srt=90, col=mPal(oxCols$red2))
+            #lines(range(dates), rep(n,2),  col=mPal(oxCols$red1, 0.5))
+        }
+        axis(1,at = sampTimes, labels = NA, lwd=0, lwd.ticks=1, tcl=-0.25)
+        #abline(v=sampTimes, lty=3, lwd=0.5)
+    
+    
+           
+    # PopSize skyline
+    
+        ylims  <- 1.05*c(log(10^3), max(log(10^7), max(logPopSizesHPD.BESP20_12)))
+        drawPlotAxes(xticks, ylims, ylab=expression("N"[e]~tau), plotNr="B", plotXAxis=TRUE, sciNot=FALSE) 
+        plotLogYAxis(exp(ylims))
+    
+        # Skylines
+        plotSkyline(popTimes, logPopSizesHPD.BSP20,     add=TRUE, new=FALSE, fill=mPal(oxCols$red2,0.25), col=mPal(oxCols$red2), lty=3)
+        plotSkyline(popTimes, logPopSizesHPD.BESP20_12, add=TRUE, new=FALSE, fill=mPal(oxCols$blue1, 0.5), col=mPal(oxCols$oxblue))
+        #plotSkyline(popTimes, logPopSizesHPD.BESP20_1,  add=TRUE, new=FALSE, fill=mPal(oxCols$orange3,0.5), col=mPal(oxCols$orange1), lty=3)
+    
+    
+        legend("topright", horiz=FALSE, inset=c(-0.32,0), border=c(mPal(oxCols$oxblue), mPal(oxCols$red2)), fill = c(mPal(oxCols$blue1, 0.5), mPal(oxCols$red2, 0.25)), 
+               legend=c("BESP (12 epochs)", "BSP"), bty='n', xpd=TRUE, cex=1.5)
+        
+        
+    # Sampling intensity skyline
+    
+        ylims  <- 1.05*c(log(1e-10), max(log(1e-5), max(logSampIntensityHPD.BESP20_12)))
+        drawPlotAxes(xticks, ylims, ylab=expression(beta), plotNr="C", plotXAxis=TRUE, sciNot=FALSE)
+        plotLogYAxis(exp(ylims))
+        mtext(side=1, text="Years before present", line=3, cex.lab=1.5)
+    
+        plotSkyline(sampTimes, logSampIntensityHPD.BESP20_12, type='step', add=TRUE, new=FALSE,  fill=mPal(oxCols$blue1, 0.5), col=mPal(oxCols$oxblue))
+        rect(min(sampTimes), logSampIntensityHPD.BESP20_1["lower"], max(sampTimes), logSampIntensityHPD.BESP20_1["upper"], col=mPal(oxCols$orange3,0.5), border=NA)
+        lines(range(sampTimes), rep(logSampIntensityHPD.BESP20_1["med"],2), col=mPal(oxCols$orange1), lty=3)
+    
+        legend("topright", horiz=FALSE, inset=c(-0.32,0), border=c(mPal(oxCols$oxblue), mPal(oxCols$orange1)), fill = c(mPal(oxCols$blue1, 0.5), mPal(oxCols$orange3, 0.5)), 
+               legend=c("BESP (12 epochs)", "BESP (1 epoch)"), bty='n', xpd=TRUE, cex=1.5)
+```
+
+
+
+```{r bison-results-BESP20_12-vs-BESP20_1, fig.width=10, fig.height=7, fig.cap="(A) Density of sequence sampling dates through time for the alignment of 152 bison mtDNA sequences that we used. Blue dots indicate stripcharts of individual samples for each sampling epoch. The height of the stripcharts are equal to the number of samples in each epoch. Small tick marks on the x-axis represent epoch times. Grey shading indicates cool periods in the Earth's climate (from the present: Younger Dryas, Marine Isotope Stages (MIS) 2, MIS 4). The two cross hatched areas delimit the time of the last glacial maximum (~26.5-19 ka BP) and approximate time of substantial human settlement of the Americas (~16-14 ka BP). (B) Median (solid/dotted line) and 95% highest posterior density (HPD) intervals (shaded areas) for the genetic diversity estimates (N_e*tau) through time. The 12-epoch BESP estimate is shown in blue and the single-epoch BESP estimate in yellow. (C) Median (solid line/dotted line) and 95% HPD intervals (shaded areas) of the estimated sampling intensities (beta)  for each sampling epoch. The 12-epoch BESP estimates are in blue and a single-epoch (density-defined) estimate is in yellow."} 
+
+    popTimes  <- gridTimes
+    sampTimes <- c(0, sampIntensityTimes.BESP20_12)
+    
+    bison <- read.csv("../data/Bison/bison_2013_taxa.csv")
+    
+    bison$epoch <- rep(0,nrow(bison))
+    bison$epoch[bison$age <= sampTimes[2]] <- 1
+    for (i in 2:(length(sampTimes)-1)) {
+        bison$epoch[bison$age > sampTimes[i] & bison$age <= sampTimes[i+1]] <- i
+    }
+    
+    logPopSizesHPD.BESP20_1  <- t(getHPDMedian(log(popSizesGridded.BESP20_1)))
+    logPopSizesHPD.BESP20_12 <- t(getHPDMedian(log(popSizesGridded.BESP20_12)))
+    
+    logSampIntensityHPD.BESP20_1  <- getHPDMedian(log(mcmc.combined.BESP20_1[,"bSamplingIntensity"]))
+    logSampIntensityHPD.BESP20_12 <- t(getHPDMedian(log(sampIntensities.BESP20_12)))
+    
+    
+    #par(mfrow=c(3,1), mar=c(4,6,0,2)+0.1)
+    par(mfrow=c(3,1), mar=c(4,6,0.5,25)+0.1)
+    #xticks <- c(0,500, seq(5000,50000,by=5000),60000)
+    xticks <- c(sampTimes[c(1,2,5,7,13)], 80000)
+    
+    # Samples
+    
+        sampleMax <- 30
+        ylims     <- c(0, sampleMax)
+        scaling   <- ylims[2]/sampleMax   # = 1
+        
+        drawPlotAxes(xticks, ylims, ylab="Samples/epoch", plotNr="A", plotYAxis=TRUE, plotXAxis=TRUE, sciNot=FALSE) 
+        
+        # Plot samples
+        for (epoch in 1:max(bison$epoch)) {
+            ages  <- bison$age[bison$epoch == epoch]
+            n     <- length(ages)*scaling
+            
+            points(ages[1], n, pch=20, col=mPal(oxCols$blue1, 0.5))
+            ages <- ages[-1]
+            points(ages, jitter(rep(n/2,length(ages)), amount=max(0.05,n/2)), pch=20, col=mPal(oxCols$blue1, 0.5))
+            #text(x=as.numeric(strsplit(season, "-")[[1]][2]), y=max(25,n+10), labels = paste0("(",n,")"), srt=90, col=mPal(oxCols$red2))
+            #lines(range(dates), rep(n,2),  col=mPal(oxCols$red1, 0.5))
+        }
+        axis(1,at = sampTimes, labels = NA, lwd=0, lwd.ticks=1, tcl=-0.25)
+        #abline(v=sampTimes, lty=3, lwd=0.5)
+    
+    
+           
+    # PopSize skyline
+    
+        ylims  <- 1.05*c(log(10^3), max(log(10^7), max(logPopSizesHPD.BESP20_12)))
+        drawPlotAxes(xticks, ylims, ylab=expression("N"[e]~tau), plotNr="B", plotXAxis=TRUE, sciNot=FALSE) 
+        plotLogYAxis(exp(ylims))
+    
+        # Skylines
+        plotSkyline(popTimes, logPopSizesHPD.BESP20_12, add=TRUE, new=FALSE, fill=mPal(oxCols$blue1, 0.5), col=mPal(oxCols$oxblue))
+        plotSkyline(popTimes, logPopSizesHPD.BESP20_1,  add=TRUE, new=FALSE, fill=mPal(oxCols$orange3,0.5), col=mPal(oxCols$orange1), lty=3)
+    
+    
+        legend("topright", horiz=FALSE, inset=c(-0.32,0), border=c(mPal(oxCols$oxblue), mPal(oxCols$orange1)), fill = c(mPal(oxCols$blue1, 0.5), mPal(oxCols$orange3, 0.5)), 
+               legend=c("BESP (12 epochs)", "BESP (1 epoch)"), bty='n', xpd=TRUE, cex=1.5)
+        
+        
+    # Sampling intensity skyline
+    
+        ylims  <- 1.05*c(log(1e-10), max(log(1e-5), max(logSampIntensityHPD.BESP20_12)))
+        drawPlotAxes(xticks, ylims, ylab=expression(beta), plotNr="C", plotXAxis=TRUE, sciNot=FALSE)
+        plotLogYAxis(exp(ylims))
+        mtext(side=1, text="Years before present", line=3, cex.lab=1.5)
+    
+        plotSkyline(sampTimes, logSampIntensityHPD.BESP20_12, type='step', add=TRUE, new=FALSE,  fill=mPal(oxCols$blue1, 0.5), col=mPal(oxCols$oxblue))
+        rect(min(sampTimes), logSampIntensityHPD.BESP20_1["lower"], max(sampTimes), logSampIntensityHPD.BESP20_1["upper"], col=mPal(oxCols$orange3,0.5), border=NA)
+        lines(range(sampTimes), rep(logSampIntensityHPD.BESP20_1["med"],2), col=mPal(oxCols$orange1), lty=3)
+    
+        legend("topright", horiz=FALSE, inset=c(-0.32,0), border=c(mPal(oxCols$oxblue), mPal(oxCols$orange1)), fill = c(mPal(oxCols$blue1, 0.5), mPal(oxCols$orange3, 0.5)), 
+               legend=c("BESP (12 epochs)", "BESP (1 epoch)"), bty='n', xpd=TRUE, cex=1.5)
+```
+
+
+
+
+
+```{r bison-results-groupSizes, fig.width=10, fig.height=7, fig.cap="Population size segments for the alignment of 152 bison mtDNA sequences, as estimated under the 12-epoch BESP (A), single-epoch BESP (B) and BSP (C), with p = 20. Median posterior estimates of segments (t_{j-1}-t_j) are shown in blue. HPD intervals for the segment end-times are indicated by red arrows. Red shading shows the kernel density estimate of the posterior segment times (t_j). Grey shading indicates cool periods in the Earth's climate (from the present: Younger Dryas, Marine Isotope Stages (MIS) 2, MIS 4). The two cross hatched areas delimit the time of the last glacial maximum (~26.5-19 ka BP) and approximate time of substantial human settlement of the Americas (~16-14 ka BP)."} 
+
+    logPopSizesHPD.BSP20     <- t(getHPDMedian(log(popSizesGridded.BSP20)))
+    
+    popSizeTimes.BESP20_12.HPD <- rbind(rep(0,3), getHPDMedian(popSizeTimes.BESP20_12))
+    popSizeTimes.BESP20_1.HPD  <- rbind(rep(0,3), getHPDMedian(popSizeTimes.BESP20_1))
+    popSizeTimes.BSP20.HPD     <- rbind(rep(0,3), getHPDMedian(popSizeTimes.BSP20))
+
+    
+    
+    #par(mfrow=c(3,1), mar=c(4,6,0,2)+0.1)
+    par(mfrow=c(3,1), mar=c(4,6,0.5,25)+0.1)
+    #xticks <- c(0,500, seq(5000,50000,by=5000),60000)
+    xticks <- c(0, 150000)
+
+    # BESP 20_12
+        drawPlotAxes(xticks, ylims=c(0,22), ylab="BESP (12 epochs)\nsegments", plotNr="A", plotXAxis=TRUE, plotYAxis=TRUE, sciNot=FALSE) 
+        
+        density_500y <- density(popSizeTimes.BESP20_12, bw=500, from=0, to=150000)
+        density_500y$y <- c(0, density_500y$y*21/max(density_500y$y*1.05),0)
+        density_500y$x <- c(0, density_500y$x, 150000)
+        
+        polygon(density_500y, col=mPal(oxCols$red2,0.25), border=NA)
+        for (i in 1:20) {
+            #y <- jitter(20, amount = 20)
+            y <- i
+            #lines(c(popSizeTimes.BESP20_12.HPD[i,2],   popSizeTimes.BESP20_12.HPD[i+1,2]), rep(y, 2), col=mPal(oxCols$blue1), lwd=5)
+            rect(popSizeTimes.BESP20_12.HPD[i,2], y-0.5, popSizeTimes.BESP20_12.HPD[i+1,2], y+0.5, border = NA, col=mPal(oxCols$blue1,0.75))
+            
+            #lines(c(popSizeTimes.BESP20_12.HPD[i,1],   popSizeTimes.BESP20_12.HPD[i,3]),   rep(y, 2), col=mPal(oxCols$red2),  lwd=2)
+            #lines(c(popSizeTimes.BESP20_12.HPD[i+1,1], popSizeTimes.BESP20_12.HPD[i+1,3]), rep(y, 2), col=mPal(oxCols$red2),  lwd=2)
+            
+            #arrows(popSizeTimes.BESP20_12.HPD[i,1], y-0.5, popSizeTimes.BESP20_12.HPD[i,3], y-0.5, code = 3, angle = 90, length = 0.05, col=mPal(oxCols$red2))
+            arrows(popSizeTimes.BESP20_12.HPD[i+1,1], y+0.5, popSizeTimes.BESP20_12.HPD[i+1,3], y+0.5, code = 3, angle = 90, length = 0.05, col=mPal(oxCols$red2))
+        }
+
+    # BESP 20_1
+        drawPlotAxes(xticks, ylims=c(0,22), ylab="BESP (1 epoch)\nsegments", plotNr="B", plotXAxis=TRUE, plotYAxis=TRUE, sciNot=FALSE) 
+        
+        density_500y <- density(popSizeTimes.BESP20_1, bw=500, from=0, to=150000)
+        density_500y$y <- c(0, density_500y$y*21/max(density_500y$y*1.05),0)
+        density_500y$x <- c(0, density_500y$x, 150000)
+        
+        polygon(density_500y, col=mPal(oxCols$red2,0.25), border=NA)
+        for (i in 1:20) {
+            #y <- jitter(20, amount = 20)
+            y <- i
+            #lines(c(popSizeTimes.BESP20_1.HPD[i,2],   popSizeTimes.BESP20_1.HPD[i+1,2]), rep(y, 2), col=mPal(oxCols$blue1), lwd=5)
+            rect(popSizeTimes.BESP20_1.HPD[i,2], y-0.5, popSizeTimes.BESP20_1.HPD[i+1,2], y+0.5, border = NA, col=mPal(oxCols$blue1,0.75))
+            
+            #lines(c(popSizeTimes.BESP20_1.HPD[i,1],   popSizeTimes.BESP20_1.HPD[i,3]),   rep(y, 2), col=mPal(oxCols$red2),  lwd=2)
+            #lines(c(popSizeTimes.BESP20_1.HPD[i+1,1], popSizeTimes.BESP20_1.HPD[i+1,3]), rep(y, 2), col=mPal(oxCols$red2),  lwd=2)
+            
+            #arrows(popSizeTimes.BESP20_1.HPD[i,1], y-0.5, popSizeTimes.BESP20_1.HPD[i,3], y-0.5, code = 3, angle = 90, length = 0.05, col=mPal(oxCols$red2))
+            arrows(popSizeTimes.BESP20_1.HPD[i+1,1], y+0.5, popSizeTimes.BESP20_1.HPD[i+1,3], y+0.5, code = 3, angle = 90, length = 0.05, col=mPal(oxCols$red2))
+        }
+        
+    # BSP 20
+        drawPlotAxes(xticks, ylims=c(0,22), ylab="BSP\nsegments", plotNr="C", plotXAxis=TRUE, plotYAxis=TRUE, sciNot=FALSE) 
+        
+        density_500y <- density(popSizeTimes.BSP20, bw=500, from=0, to=150000)
+        density_500y$y <- c(0, density_500y$y*21/max(density_500y$y*1.05),0)
+        density_500y$x <- c(0, density_500y$x, 150000)
+        
+        polygon(density_500y, col=mPal(oxCols$red2,0.25), border=NA)
+        for (i in 1:20) {
+            #y <- jitter(20, amount = 20)
+            y <- i
+            #lines(c(popSizeTimes.BSP20.HPD[i,2],   popSizeTimes.BSP20.HPD[i+1,2]), rep(y, 2), col=mPal(oxCols$blue1), lwd=5)
+            rect(popSizeTimes.BSP20.HPD[i,2], y-0.5, popSizeTimes.BSP20.HPD[i+1,2], y+0.5, border = NA, col=mPal(oxCols$blue1,0.75))
+            
+            #lines(c(popSizeTimes.BSP20.HPD[i,1],   popSizeTimes.BSP20.HPD[i,3]),   rep(y, 2), col=mPal(oxCols$red2),  lwd=2)
+            #lines(c(popSizeTimes.BSP20.HPD[i+1,1], popSizeTimes.BSP20.HPD[i+1,3]), rep(y, 2), col=mPal(oxCols$red2),  lwd=2)
+            
+            #arrows(popSizeTimes.BSP20.HPD[i,1], y-0.5, popSizeTimes.BSP20.HPD[i,3], y-0.5, code = 3, angle = 90, length = 0.05, col=mPal(oxCols$red2))
+            arrows(popSizeTimes.BSP20.HPD[i+1,1], y+0.5, popSizeTimes.BSP20.HPD[i+1,3], y+0.5, code = 3, angle = 90, length = 0.05, col=mPal(oxCols$red2))
+        }
+        
+        mtext(side=1, text="Years before present", line=3, cex.lab=1.5)
+```
+
+
+
+```{r bison-results-BESP20_12-MCCtree, fig.width=7.5, fig.height=9, fig.cap="MCC tree of the alignment of 152 bison mtDNA sequences estimated under the 12-epoch BESP. Grey shading indicates cool periods in the Earth's climate (from the present: Younger Dryas, Marine Isotope Stages (MIS) 2, MIS 4). The two cross hatched areas delimit the time of the last glacial maximum (~26.5-19 ka BP) and approximate time of substantial human settlement of the Americas (~16-14 ka BP)."} 
+
+    model.BESP20_12    <- "Bison.HKY.BESP20_12"
+    phylo <- read.nexus(paste0(logpath, model.BESP20_12, ".125.MCC.tree"))
+    tmrca <- max(getx(phylo, sersampling = TRUE)[,1])
+    
+    xticks     <- c(0, 125000)
+    minTime    <- -0.025*diff(range(xticks))
+    
+    #par(mfrow=c(1,1), mar=c(4,6,0.5,25)+0.1)
+    drawPlotAxes(xticks, ylims=c(0,1), ylab="", plotNr="", plotXAxis=TRUE, plotYAxis=FALSE, sciNot=FALSE, mirror=TRUE) 
+    
+    #abline(v=tmrca)
+    #abline(v=0)
+    
+    # Set x-axis limits so that tMRCA=0 and maxTime = tMRCA (on calendar times)
+    k     <- phylo$Nnode
+    ylims <- c(-0.04*k, 1.04*k)
+    x1    <- (tmrca-max(xticks))
+    x2    <- tmrca - minTime
+    
+    par(new=TRUE)
+    plot(ladderize(phylo, right=TRUE),  show.tip.label=FALSE, direction="rightwards", edge.width=0.5, edge.color=mPal(oxCols$oxblue),
+         xaxs='i', yaxs='i', xpd=TRUE, y.lim=ylims, x.lim=c(x1, x2))
+    par(new=FALSE)
+
+    mtext(side=1, text="Years before present", line=3, cex=1.5)
+
+
+```
+
+
+\clearpage
+
+# Session info
+
+```{r sessionInfo}
+    sessionInfo()
+```
