@@ -13,11 +13,16 @@ _Estimating past population dynamics from molecular sequences that have been sam
 
 ## Prerequisites
 
+### Python
+- numpy
+- yaml
+- BioPython
+
 
 
 ## Bayesian simulation study
 
-1. **Simulate trees:** The workflow will simulate 100 replicate trees under a density-defined (linear preferential sampling) protocol and a frequency-defined (constant number of samples per epoch) protocol with 8 and 24 sampling epochs. To make the simulations run faster reduce the number of replicates, or increase the lower bound on the population size used to simulate coalescent trees (`SimUtils.R`, line 78). Keep in mind that if the lower bound is too high the demographic function for each simulated tree will turn into a constant-size coalescent once this bound is reached.
+1. **Simulate trees:** This will simulate 100 replicate trees under a density-defined (linear preferential sampling) protocol and a frequency-defined (constant number of samples per epoch) protocol with 8 and 24 sampling epochs. To make the simulations run faster reduce the number of replicates, or increase the lower bound on the population size used to simulate coalescent trees (`SimUtils.R`, line 78). Keep in mind that if the lower bound is too high the demographic function for each simulated tree will turn into a constant-size coalescent once this bound is reached.
 	- Input: 
 		- _N/A_
 	- Scripts: 
@@ -27,11 +32,25 @@ _Estimating past population dynamics from molecular sequences that have been sam
 		- `workflows:simulate_trees.Rmd`	
 	- Output: 
 		- `results/simulations/`: Stored in `.RData`, `.csv`, `.trees` and `.json` files. _(Only the `.trees` and `.json` files are uploaded on the repository)._
-2. Create XML files:
-	- Workflow:
-	- Scripts:
+2. **Create XML files:** This will create BEAST2 XML files for each of the replicate trees simulated above.
 	- Input: 
+		- `templates/`: Template BEAST2 XML files for fixed tree analyses with the BESP with placeholders for data and parameters. 
+		- `results/simulation_results/linear_epoch_24/config/:` Configuration files for the five different demographic scenarios.
+	- Scripts: 
+ 		- `scripts/beastutils.py`
+		- `scripts/MakeBEASTXML.py`
+	- Workflow:
+		- Run: `python MakeBEASTXML.py -i ../results/simulation_results/linear_epoch_24/config/` from `scripts/`
+	- Output:
+		- `results/simulation_results/linear_epoch_24/`: XML files and bash script for running XML files.
 3. Run in BEAST:
+	- Input: 
+		- `results/simulation_results/linear_epoch_24/`
+	- Workflow:
+		- Run the bash script in the directory of each of the demographic scenarios and provide the BEAST2 `.jar` file as the first argument.
+		- Or use GNU parallel to speed up the process if you have many cores, e.g. run: `ls *.xml | parallel --delay 1 --jobs 75% --results outdir -I% --max-args 1 java -jar ../../../../BEAST2_BESP.jar -overwrite -seed 127 % &` from `results/simulation_results/linear_epoch_24/bottleneck/` 
+	- Output:  
+		- `results/simulation_results/linear_epoch_24/`: 
 4. Check convergence and compute summary statistics
 
 ## Case study 1: Seasonal Human Influenza
