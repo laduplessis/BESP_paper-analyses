@@ -207,9 +207,6 @@ getStats <- function(simresult, popSizes, sampIntensities=NULL, popSizeTimes, sa
               simresult[[i]]$samp_intensity <- rep(simresult[[i]]$samp_intensity, length(sampIntensityTimes[[i]]))
           }
           
-          if (abs(maxSampleTime - s[length(s)]) > 1e-6) {
-              stop(paste("Oldest sampling time mismatch between simulation and analysis:",maxSampleTime,"!=", s[length(s)]))
-          }
       } else {
           sampIntensityHPD <- NULL
           sampIntensityTruth <- NULL

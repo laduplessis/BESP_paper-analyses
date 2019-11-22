@@ -47,7 +47,7 @@ XML files are then created for each simulated tree and run in BEAST2. Finally, a
 
 To make the simulations run faster reduce the number of replicates, or increase the lower bound on the population size used to simulate coalescent trees (`SimUtils.R`, line 78). Keep in mind that if the lower bound is too high the demographic function for each simulated tree will turn into a constant-size coalescent once this bound is reached.
 
-To save space we only provide XML files and output figures for the 24-epoch BESP results and only figures on a log-scale, cut off at the most ancient sample. The output workflows for the 8-epoch BESP and the single-epoch BESP (linear preferential sampling) are provided for comparison (but are not presented in the paper).
+To save space we only provide XML files and output figures for the 24-epoch BESP results and only figures on a log-scale. The output workflow for the single-epoch BESP (linear preferential sampling) are provided for comparison (but are not presented in the paper).
 
 1. **Simulate trees:** 
 	- _Input:_ N/A
