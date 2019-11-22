@@ -6,6 +6,7 @@
                  :beast.evolution.tree.coalescent
                  :beast.util
                  :beast.core.util
+                 :beast.core.parameter
                  :beast.evolution.nuc
                  :beast.evolution.operators
                  :beast.evolution.sitemodel
@@ -693,6 +694,7 @@
     <state id="state" storeEvery="500000000">
         <stateNode idref="Tree.t:HA"/>
 
+        <!-- Site model parameters -->
         <parameter id="kappa.s:HA_1,2" lower="0.0" name="stateNode">2.0</parameter>
         <parameter id="kappa.s:HA_3" lower="0.0" name="stateNode">2.0</parameter>
 
@@ -705,10 +707,12 @@
         <parameter id="mutationRate.s:HA_1,2" name="stateNode">1.0</parameter>
         <parameter id="mutationRate.s:HA_3" name="stateNode">1.0</parameter>
         
+        <!-- Clock model parameters -->
         <parameter id="ucldMean.c:HA" name="stateNode">0.006</parameter>
         <parameter id="ucldStdev.c:HA" lower="0.0" name="stateNode">0.1</parameter>
         <stateNode id="rateCategories.c:HA" spec="parameter.IntegerParameter" dimension="1272">1</stateNode>
 
+        <!-- BESP parameters -->
         <parameter id="PopSizes.t:HA" dimension="40" lower="0.0" name="stateNode" upper="380000.0">380.0</parameter>
         <stateNode id="GroupSizes.t:HA" spec="parameter.IntegerParameter" dimension="40" lower="2">1</stateNode>       
         <parameter id="SamplingIntensity.t:HA" dimension="1" lower="0.0" name="stateNode">1</parameter>           
@@ -716,66 +720,66 @@
 
 
     <distribution id="posterior" spec="util.CompoundDistribution">
+
+        <!-- Begin prior -->
         <distribution id="prior" spec="util.CompoundDistribution">
 
-            <!-- Tree model priors -->
-            <distribution id="BayesianSkyline.t:HA" spec="PrefBSP" 
+            <!-- Treeprior (Bayesian Epoch Sampling Skyline Plot) -->
+            <distribution id="BayesianSkyline.t:HA" spec="BESP" 
                           popSizes="@PopSizes.t:HA" popSizeGroupSizes="@GroupSizes.t:HA" minWidth="0.08"
                           samplingIntensity="@SamplingIntensity.t:HA">
-                <treeIntervals id="BSPTreeIntervals.t:HA" spec="TreeIntervals" tree="@Tree.t:HA"/>
+                <treeIntervals id="BESPTreeIntervals.t:HA" spec="TreeIntervals" tree="@Tree.t:HA"/>
             </distribution>
 
+            <!-- Smoothing prior -->
             <distribution id="MarkovChainedPopSizes.t:HA" spec="beast.math.distributions.MarkovChainDistribution" jeffreys="true" parameter="@PopSizes.t:HA"/>
+
+            <!-- Sampling Intensity Prior -->
+            <prior id="SamplingIntensityPrior.t:HA" name="distribution" x="@SamplingIntensity.t:HA">
+                <Uniform name="distr" upper="1e6"/>
+            </prior>
 
             <!-- Site model priors -->
             <prior id="GammaShapePrior.s:HA_1,2" name="distribution" x="@gammaShape.s:HA_1,2">
-                <Exponential id="Exponential.1" name="distr">
-                    <parameter id="RealParameter.1" estimate="false" name="mean">1.0</parameter>
-                </Exponential>
+                <Exponential name="distr" mean="1.0"/>
             </prior>
             <prior id="GammaShapePrior.s:HA_3" name="distribution" x="@gammaShape.s:HA_3">
-                <Exponential id="Exponential.1.HA_3" name="distr">
-                    <parameter id="RealParameter.1.HA_3" estimate="false" name="mean">1.0</parameter>
-                </Exponential>
+                <Exponential name="distr" mean="1.0"/>
             </prior>
 
             <prior id="KappaPrior.s:HA_1,2" name="distribution" x="@kappa.s:HA_1,2">
-                <LogNormal id="LogNormalDistributionModel.0" name="distr">
-                    <parameter id="RealParameter.3" estimate="false" name="M">1.0</parameter>
-                    <parameter id="RealParameter.4" estimate="false" name="S">1.25</parameter>
-                </LogNormal>
+                <LogNormal name="distr" M="1.0" S="1.25"/>
             </prior>
             <prior id="KappaPrior.s:HA_3" name="distribution" x="@kappa.s:HA_3">
-                <LogNormal id="LogNormalDistributionModel.0.HA_3" name="distr">
-                    <parameter id="RealParameter.3.HA_3" estimate="false" name="M">1.0</parameter>
-                    <parameter id="RealParameter.4.HA_3" estimate="false" name="S">1.25</parameter>
-                </LogNormal>
+                <LogNormal name="distr" M="1.0" S="1.25"/>
             </prior>
 
             <!-- Clock model priors -->
             <prior id="MeanRatePrior.c:HA" name="distribution" x="@ucldMean.c:HA">
-                <LogNormal id="LogNormalDistributionModel.1" meanInRealSpace="true" name="distr">
-                    <parameter id="RealParameter.8" estimate="false" name="M">0.006</parameter>
-                    <parameter id="RealParameter.9" estimate="false" lower="0.0" name="S" upper="5.0">0.1</parameter>
-                </LogNormal>
+                <LogNormal name="distr" meanInRealSpace="true" M="0.006" S="0.1"/>
             </prior>
             <prior id="ucldStdevPrior.c:HA" name="distribution" x="@ucldStdev.c:HA">
-                <Gamma id="Gamma.0" name="distr">
-                    <parameter id="RealParameter.6" estimate="false" name="alpha">0.5396</parameter>
-                    <parameter id="RealParameter.7" estimate="false" name="beta">0.3819</parameter>
-                </Gamma>
+                <Gamma name="distr" alpha="0.5396" beta="0.3819"/>                
             </prior>
 
         </distribution>
+        <!-- End prior -->
+
+        <!-- Begin likelihood -->
         <distribution id="likelihood" spec="util.CompoundDistribution" useThreads="true">
 
+            <!-- Alignment likelihood 1st and 2nd position -->
             <distribution id="treeLikelihood.HA_1,2" spec="ThreadedTreeLikelihood" data="@HA_1,2" tree="@Tree.t:HA">
+
+                <!-- Site model -->                
                 <siteModel id="SiteModel.s:HA_1,2" spec="SiteModel" gammaCategoryCount="4" mutationRate="@mutationRate.s:HA_1,2" shape="@gammaShape.s:HA_1,2">
                     <parameter id="proportionInvariant.s:HA_1,2" estimate="false" lower="0.0" name="proportionInvariant" upper="1.0">0.0</parameter>
                     <substModel id="hky.s:HA_1,2" spec="HKY" kappa="@kappa.s:HA_1,2">
                         <frequencies id="estimatedFreqs.s:HA_1,2" spec="Frequencies" frequencies="@freqParameter.s:HA_1,2"/>
                     </substModel>
                 </siteModel>
+
+                <!-- Clock model (relaxed clock) -->
                 <branchRateModel id="RelaxedClock.c:HA" spec="beast.evolution.branchratemodel.UCRelaxedClockModel" clock.rate="@ucldMean.c:HA" rateCategories="@rateCategories.c:HA" tree="@Tree.t:HA">
                     <LogNormal id="LogNormalDistributionModel.c:HA" S="@ucldStdev.c:HA" meanInRealSpace="true" name="distr">
                         <parameter id="RealParameter.5" estimate="false" lower="0.0" name="M" upper="1.0">1.0</parameter>
@@ -783,17 +787,24 @@
                 </branchRateModel>
             </distribution>
 
+            <!-- Alignment likelihood 3rd position -->
             <distribution id="treeLikelihood.HA_3" spec="ThreadedTreeLikelihood" branchRateModel="@RelaxedClock.c:HA" tree="@Tree.t:HA">
+
                 <data id="HA_3" spec="FilteredAlignment" data="@HA" filter="3::3"/>
+
+                <!-- Site model -->                
                 <siteModel id="SiteModel.s:HA_3" spec="SiteModel" gammaCategoryCount="4" mutationRate="@mutationRate.s:HA_3" shape="@gammaShape.s:HA_3">
                     <parameter id="proportionInvariant.s:HA_3" estimate="false" lower="0.0" name="proportionInvariant" upper="1.0">0.0</parameter>
                     <substModel id="hky.s:HA_3" spec="HKY" kappa="@kappa.s:HA_3">
                         <frequencies id="estimatedFreqs.s:HA_3" spec="Frequencies" frequencies="@freqParameter.s:HA_3"/>
                     </substModel>
                 </siteModel>
+
             </distribution>
 
         </distribution>
+        <!-- End likelihood -->
+
     </distribution>
 
 
@@ -843,7 +854,7 @@
         <intparameter idref="GroupSizes.t:HA"/>
     </operator>
 
-    <operator id="samplingScaler.t:HA" spec="ScaleOperator" parameter="@SamplingIntensity.t:HA" scaleFactor="0.5" weight="2.0"/>
+    <operator id="samplingScaler.t:HA" spec="ScaleOperator" parameter="@SamplingIntensity.t:HA" scaleFactor="0.5" weight="5.0"/>
 
     <!--operator id="updownBD.t:HA" spec="UpDownOperator" scaleFactor="0.75" weight="5.0">
           <up   idref="SamplingIntensity.t:HA"/>
@@ -852,7 +863,7 @@
 
 
 
-    <logger id="tracelog" fileName="output/HA.HKY+G+F.BESP40_1.$(seed).log" logEvery="10000" model="@posterior" sanitiseHeaders="true" sort="smart">
+    <logger id="tracelog" fileName="output/$(filebase).$(seed).log" logEvery="10000" model="@posterior" sanitiseHeaders="true" sort="smart">
         <log idref="posterior"/>
         <log idref="likelihood"/>
         <log idref="prior"/>
@@ -878,9 +889,10 @@
         <log idref="PopSizes.t:HA"/>
         <log idref="GroupSizes.t:HA"/>
         <log id="PopSizeChangeTimes.t:HA" spec="popSizeChangeTimeLogger" skyline="@BayesianSkyline.t:HA"/>        
-
+ 
         <log idref="SamplingIntensity.t:HA"/>
         <log id="SamplingIntensityChangeTimes.t:HA" spec="samplingIntensityChangeTimeLogger" skyline="@BayesianSkyline.t:HA"/>        
+
     </logger>
 
     <logger id="screenlog" logEvery="100000">
@@ -890,7 +902,7 @@
         <log idref="prior"/>
     </logger>
 
-    <logger id="treelog.t:HA" fileName="output/HA.HKY+G+F.BESP40_1.$(seed).trees" logEvery="10000" mode="tree">
+    <logger id="treelog.t:HA" fileName="output/$(filebase).$(seed).trees" logEvery="10000" mode="tree">
         <log id="TreeWithMetaDataLogger.t:HA" spec="beast.evolution.tree.TreeWithMetaDataLogger" branchratemodel="@RelaxedClock.c:HA" tree="@Tree.t:HA"/>
     </logger>
 

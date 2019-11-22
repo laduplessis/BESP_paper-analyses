@@ -14,7 +14,7 @@ _Estimating past population dynamics from molecular sequences that have been sam
 ## Dependencies
 
 ### BEAST2
-BEAST v2.5.0 with the BESP package installed. For now we just provide a `.jar` file on this repository until the package is ready to be released. 
+BEAST v2.6.0 with the besp package installed. Alternatively, use the `.jar` file included with this repository.
 
 ### Python
 - numpy
@@ -36,11 +36,6 @@ These packages are developed by Louis du Plessis and not available on CRAN yet. 
 	- _R-package with functions for pre- and post-processing of BEAST and BEAST2 files (good for automating the functionality in Tracer or Logcombiner e.g. checking convergence in hundreds of replicates from a simulation study or combining many chains)._
 - [rskylinetools](https://github.com/laduplessis/rskylinetools): 
 	- _R-package implementing function for gridding skylines (so this work doesn't need to be painstakingly done in Tracer)._
-- [bdskytools](https://github.com/laduplessis/bdskytools): 
-	- _R-package with functions for plotting skylines (and many other odds and ends). This package will be decommissioned in the near future and skylineplot functions integrated into rskylinetools)_
-
-
-
 
 
 
@@ -72,7 +67,7 @@ To save space we only provide XML files and output figures for the 24-epoch BESP
 	- _Workflow:_ Run from `scripts/`
 	
 		```bash
-		python MakeBEASTXML.py -i ../results/simulation_results/linear_epoch_24/config/` 
+		python MakeBEASTXML.py -i ../results/simulation_results/linear_epoch_24/config/
 		```
 	- _Output:_
 		- `results/simulation_results/linear_epoch_24/`: XML files and bash script for running XML files.
