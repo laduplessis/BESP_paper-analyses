@@ -14,7 +14,7 @@ _Estimating past population dynamics from molecular sequences that have been sam
 ## Dependencies
 
 ### BEAST2
-BEAST v2.6.0 with the besp package installed. Alternatively, use the `.jar` file included with this repository.
+BEAST v2.6.0 with the besp package installed. The package source code and installation instructions are available on [GitHub](https://github.com/laduplessis/besp) Alternatively, use the `.jar` file included with this repository.
 
 ### Python
 - numpy
