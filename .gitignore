@@ -6,3 +6,5 @@ __pycache__
 *_cache/
 *.csv
 *.RData
+*.state
+*.sh
