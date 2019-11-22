@@ -8,7 +8,7 @@ This repository contains the raw data, configuration files and scripts necessary
 
 ### Abstract
 
-_Estimating past population dynamics from molecular sequences that have been sampled through time is an important problem in infectious disease epidemiology, molecular ecology and macroevolution. Popular solutions, such as the skyline and skygrid approaches, infer past effective population sizes from the coalescent event times of phylogenies reconstructed from longitudinally sampled sequences. These methods assume that sequence sampling times are uninformative about population size dynamics. Recent work has started to question this assumption by exploring how sample time information can aid coalescent inference. Here we develop, investigate, and implement a new skyline method, termed the epoch sampling skyline plot (ESP), to jointly estimate the dynamics of population size and sampling rate through time. The ESP is inspired by real-world data collection practices. It comprises a flexible model in which the sequence sampling rate is proportional to the population size within an epoch, but can change discontinuously between epochs. We show that the ESP achieves accurate estimates under several realistic sampling protocols and we prove analytically that it can at least double the best precision attainable by standard approaches. We generalise the ESP to incorporate phylogenetic uncertainty in a new Bayesian package (BESP) in BEAST2. We further examine two well-studied empirical datasets from virus epidemiology and macroevolution. We find that the BESP improves upon previous coalescent estimators and generates new and biologically-useful insights into the sampling protocols underpinning these empirical datasets. Sequence sampling times  comprise a rich source of information for coalescent inference  that will become increasingly important as sequence collection intensifies and becomes more formalised._
+_Estimating past population dynamics from molecular sequences that have been sampled longitudinally through time is an important problem in infectious disease epidemiology, molecular ecology and macroevolution. Popular solutions, such as the skyline and skygrid methods, infer past effective population sizes from the coalescent event times of phylogenies reconstructed from sampled sequences, but assume that sequence sampling times are uninformative about population size changes. Recent work has started to question this assumption by exploring how sampling time information can aid coalescent inference. Here we develop, investigate, and implement a new skyline method, termed the epoch sampling skyline plot (ESP), to jointly estimate the dynamics of population size and sampling rate through time. The ESP is inspired by real-world data collection practices and comprises a flexible model in which the sequence sampling rate is proportional to the population size within an epoch, but can change discontinuously between epochs. We show that the ESP is accurate under several realistic sampling protocols and we prove analytically that it can at least double the best precision achievable by standard approaches. We generalise the ESP to incorporate phylogenetic uncertainty in a new Bayesian package (BESP) in BEAST2. We re-examine two well-studied empirical datasets from virus epidemiology and molecular evolution and find that the BESP improves upon previous coalescent estimators and generates new, biologically-useful insights into the sampling protocols underpinning these datasets. Sequence sampling times provide a rich source of information for coalescent inference that will become increasingly important as sequence collection intensifies and becomes more formalised._
 
 
 ## Dependencies
@@ -139,8 +139,8 @@ To save space we only provide XML files and output figures for the 24-epoch BESP
 		- `results/H3N2/HA_trim/output/`
 5. **Check convergence and analyse results:**
 	- _Input:_ `results/H3N2/HA_trim/output/`
-	- _Workflow:_ `workflows/H3N2_trim_results.Rmd`
-	- _Output:_ `workflows/H3N2_trim_results_files/figure-latex/`
+	- _Workflow:_ `workflows/HA_trim_results.Rmd`
+	- _Output:_ `results/H3N2/HA_trim/figures/`
 
 ## Case study 2: Steppe Bison
 
@@ -168,4 +168,4 @@ To save space we only provide XML files and output figures for the 24-epoch BESP
 3. **Check convergence and analyse results:**
  	- _Input:_ `results/Bison/output/`
 	- _Workflow:_ `workflows/bison_results.Rmd`
-	- _Output:_ `workflows/bison_results_files/figure-latex/`
+	- _Output:_ `results/Bison/figures/`

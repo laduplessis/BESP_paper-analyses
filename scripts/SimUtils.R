@@ -101,6 +101,37 @@ simulate_genealogy <- function(traj, nrsamples=500, samp_start=0, samp_end=50, s
 }
 
 
+#' Deprecated
+simulate_genealogy_save <- function(traj, nrsamples=500, samp_end=50) {
+  
+  # Get the sampling intensity and sampling times (sampling intensity is a constant of proportionality)
+  # Assumes a constant sampling intensity through time
+  samp_intensity <- nrsamples/integrate(traj_beta, 0, samp_end, traj=traj, beta=1)$value    
+  samp_times     <- pref_sample(traj, c=samp_intensity, lim=c(0,samp_end), beta=1)
+  
+  # Simulate the genealogy under the population size trajectory and sampling times
+  genealogy      <- coalsim(samp_times = samp_times, 
+                            n_sampled  = rep(1,length(samp_times)), 
+                            traj       = traj, 
+                            lower_bound= 10, 
+                            method     = "thin")    
+  
+  # Sanity check
+  if (!all.equal(samp_times, genealogy$samp_times)) {
+    stop("Error! Sampling times and simulated sampling times don't match...")
+  }
+  
+  # Get a phylogenetic tree that corresponds to the genealogy
+  phylogeny      <- generate_newick(genealogy)$newick
+  
+  return(list(nrsamples      = length(samp_times), 
+              samp_intensity = samp_intensity,
+              coal_times     = genealogy$coal_times,
+              samp_times     = genealogy$samp_times,
+              phylo          = phylogeny,
+              traj           = traj))
+}
+
 
 #' Sanitise a single simulation and grid the trajectory
 prepare_simulation <- function(simresult, gridsize=1000, sanitise_times=TRUE, sanity_check=TRUE) {

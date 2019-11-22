@@ -1,5 +1,6 @@
 ---
-title: "H3N2 (trimmed) results"
+title: "H3N2 HA (trimmed) results"
+subtitle: "_637 HA sequences sampled between 1993.06 and 2005.25 (1,698bp)._"
 author: "Louis du Plessis"
 date: '`r format(Sys.time(), "Last modified: %d %b %Y")`'
 output:
@@ -14,24 +15,23 @@ editor_options:
   chunk_output_type: inline
 ---
 
-```{r rsetup, echo=FALSE, message=FALSE, results='hide', warning=FALSE}
+```{r rsetup, include=FALSE}
 
-    rm(list = ls())
-
-    library(bdskytools)
-    library(phylodyn)
+    library(ape)
     library(beastio)
-    library(rskylinetools)
     library(coda)
-    library(lubridate)
-    library(TreeSim)
+    library(rskylinetools)
+
     source("../scripts/palettes.R")
+    source("../scripts/SkylinePlot.R")
     
-    knitr::opts_chunk$set(tidy=FALSE, cache=FALSE,
-                          dev="pdf",
-                          message=FALSE, error=FALSE, warning=FALSE, echo=FALSE)
+    path <- "../results/H3N2/HA_trim/"
+
+    knitr::opts_chunk$set(tidy=FALSE, cache=FALSE, cache.path=paste0(path,"cache/"),
+                          dev="pdf", fig.path=paste0(path,"figures/"), 
+                          message=FALSE, error=FALSE, warning=FALSE, echo=FALSE, results='hide')
     
-    logpath   <- paste0("../results/H3N2/HA_trim/output/")
+    logpath   <- paste0(path,"output/")
     seeds     <- c(125, 126, 127, 128, 129, 130, 131)
     
     burnin    <- 0.3
@@ -44,6 +44,14 @@ editor_options:
 
 
 ```{r functions}
+
+  smin <- function(x, digits=2, ...) {
+    if (length(x) == 0) {
+        return ("-")
+    } else {
+        return (round(min(x, ...), digits))
+    }
+  }
 
   sciNotation <- function(x, digits = 1) {
       if (length(x) > 1) {
@@ -141,33 +149,32 @@ BESP results from analysing 637 HA sequences sampled between 1993.06 and 2005.25
 ## BSP 40
 
 ```{r convergence.BSP40, cache=TRUE, fig.width=3.5, fig.height=2}
-
-model.BSP40    <- "HA.HKY+G+F.BSP40" 
-logfiles.BSP40 <- paste0(logpath, model.BSP40, ".", seeds, ".log")
  
-# Read and combine chains
-mcmc.trace.BSP40 <- readLog(logfiles.BSP40, burnin=burnin)
-mcmc.trace.BSP40 <- window(mcmc.trace.BSP40, thin=thinning*thin(mcmc.trace.BSP40)) 
-mcmc.combined.BSP40 <- mcmc(as.matrix(mcmc.trace.BSP40, iters = FALSE, chains = FALSE))
-
-popSizes.BSP40        <- getLogFileSubset(mcmc.combined.BSP40, "PopSizes") 
-popSizeTimes.BSP40    <- getLogFileSubset(mcmc.combined.BSP40, "PopSizeChangeTimes")
-popSizesGridded.BSP40 <- mcmc(rskylinetools::reconstructBackwardSkylineSlow(popSizes.BSP40, popSizeTimes.BSP40, gridTimes))
-
-# Check convergence
-par(mar=c(3,5,1,0)+0.1, cex=0.6)
-mcmc.nonstat.BSP40     <- checkESS(mcmc.combined.BSP40,   cutoff=ESSlimit, ignored=c(varnames(mcmc.trace.BSP40)[27:nvar(mcmc.trace.BSP40)]), 
-                                       plot=TRUE, log='y', ylim=c(1,10000), title="General parameters", plot.grid=TRUE)
-pop.nonstat.BSP40      <- checkESS(popSizes.BSP40, cutoff=ESSlimit, 
-                                       plot=TRUE, log='y', ylim=c(1,10000), title="PopSize parameters", plot.grid=TRUE)
-popgrid.nonstat.BSP40  <- checkESS(popSizesGridded.BSP40, cutoff=ESSlimit, 
-                                       plot=TRUE, log='y', ylim=c(1,10000), title="Gridded PopSize parameters", plot.grid=TRUE)
-groups.nonstat.BSP40   <- checkESS(getLogFileSubset(mcmc.combined.BSP40, "GroupSizes"), cutoff=ESSlimit, 
-                                       plot=TRUE, log='y', ylim=c(1,10000), title="GroupSize parameters", plot.grid=TRUE)
-
-write.table(mcmc.combined.BSP40, paste0(logpath, model.BSP40, ".combined.log"), sep="\t", quote = FALSE)
-write.table(popSizesGridded.BSP40, paste0(logpath, model.BSP40, ".popSizesGridded.combined.log"), sep="\t", quote = FALSE)
-
+    model.BSP40    <- "HA.HKY+G+F.BSP40" 
+    logfiles.BSP40 <- paste0(logpath, model.BSP40, ".", seeds, ".log")
+     
+    # Read and combine chains  
+    mcmc.trace.BSP40 <- readLog(logfiles.BSP40, burnin=burnin)
+    mcmc.trace.BSP40 <- window(mcmc.trace.BSP40, thin=thinning*thin(mcmc.trace.BSP40)) 
+    mcmc.combined.BSP40 <- mcmc(as.matrix(mcmc.trace.BSP40, iters = FALSE, chains = FALSE))
+    
+    popSizes.BSP40        <- getLogFileSubset(mcmc.combined.BSP40, "PopSizes") 
+    popSizeTimes.BSP40    <- getLogFileSubset(mcmc.combined.BSP40, "PopSizeChangeTimes")
+    popSizesGridded.BSP40 <- mcmc(rskylinetools::reconstructBackwardSkylineSlow(popSizes.BSP40, popSizeTimes.BSP40, gridTimes))
+    
+    # Check convergence
+    par(mar=c(3,5,1,0)+0.1, cex=0.6)
+    mcmc.nonstat.BSP40     <- checkESS(mcmc.combined.BSP40,   cutoff=ESSlimit, ignored=c(varnames(mcmc.trace.BSP40)[27:nvar(mcmc.trace.BSP40)]), 
+                                           plot=TRUE, log='y', ylim=c(1,10000), title="General parameters", plot.grid=TRUE)
+    pop.nonstat.BSP40      <- checkESS(popSizes.BSP40, cutoff=ESSlimit, 
+                                           plot=TRUE, log='y', ylim=c(1,10000), title="PopSize parameters", plot.grid=TRUE)
+    popgrid.nonstat.BSP40  <- checkESS(popSizesGridded.BSP40, cutoff=ESSlimit, 
+                                           plot=TRUE, log='y', ylim=c(1,10000), title="Gridded PopSize parameters", plot.grid=TRUE)
+    groups.nonstat.BSP40   <- checkESS(getLogFileSubset(mcmc.combined.BSP40, "GroupSizes"), cutoff=ESSlimit, 
+                                           plot=TRUE, log='y', ylim=c(1,10000), title="GroupSize parameters", plot.grid=TRUE)
+    
+    writeLog(mcmc.combined.BSP40,   paste0(logpath, model.BSP40, ".combined.log"))
+    writeLog(popSizesGridded.BSP40, paste0(logpath, model.BSP40, ".popSizesGridded.combined.log"))
 
 ```
 
@@ -178,33 +185,33 @@ write.table(popSizesGridded.BSP40, paste0(logpath, model.BSP40, ".popSizesGridde
 
 ```{r convergence.BESP40_1, cache=TRUE, fig.width=3.5, fig.height=2}
 
-model.BESP40_1    <- "HA.HKY+G+F.BESP40_1"
-logfiles.BESP40_1 <- paste0(logpath, model.BESP40_1, ".", seeds, ".log") 
-   
-# Read and combine chains
-mcmc.trace.BESP40_1 <- readLog(logfiles.BESP40_1, burnin=burnin)
-mcmc.trace.BESP40_1 <- window(mcmc.trace.BESP40_1, thin=thinning*thin(mcmc.trace.BESP40_1)) 
-mcmc.combined.BESP40_1 <- mcmc(as.matrix(mcmc.trace.BESP40_1, iters = FALSE, chains = FALSE))
-
-popSizes.BESP40_1        <- getLogFileSubset(mcmc.combined.BESP40_1, "PopSizes") 
-popSizeTimes.BESP40_1    <- getLogFileSubset(mcmc.combined.BESP40_1, "PopSizeChangeTimes")
-popSizesGridded.BESP40_1 <- mcmc(rskylinetools::reconstructBackwardSkylineSlow(popSizes.BESP40_1, popSizeTimes.BESP40_1, gridTimes))
-
-sampIntensities.BESP40_1    <- getLogFileSubset(mcmc.combined.BESP40_1, "SamplingIntensity$")
-
-# Check convergence
-par(mar=c(3,5,1,0)+0.1, cex=0.6)
-mcmc.nonstat.BESP40_1     <- checkESS(mcmc.combined.BESP40_1,   cutoff=ESSlimit, ignored=c(varnames(mcmc.trace.BESP40_1)[27:(nvar(mcmc.trace.BESP40_1)-2)]), 
-                                       plot=TRUE, log='y', ylim=c(1,10000), title="General parameters", plot.grid=TRUE)
-pop.nonstat.BESP40_1      <- checkESS(popSizes.BESP40_1, cutoff=ESSlimit, 
-                                       plot=TRUE, log='y', ylim=c(1,10000), title="PopSize parameters", plot.grid=TRUE)
-popgrid.nonstat.BESP40_1  <- checkESS(popSizesGridded.BESP40_1, cutoff=ESSlimit, 
-                                       plot=TRUE, log='y', ylim=c(1,10000), title="Gridded PopSize parameters", plot.grid=TRUE)
-groups.nonstat.BESP40_1   <- checkESS(getLogFileSubset(mcmc.combined.BESP40_1, "GroupSizes"), cutoff=ESSlimit, 
-                                       plot=TRUE, log='y', ylim=c(1,10000), title="GroupSize parameters", plot.grid=TRUE)
-
-write.table(mcmc.combined.BESP40_1, paste0(logpath, model.BESP40_1, ".combined.log"), sep="\t", quote = FALSE)
-write.table(popSizesGridded.BESP40_1, paste0(logpath, model.BESP40_1, ".popSizesGridded.combined.log"), sep="\t", quote = FALSE)
+    model.BESP40_1    <- "HA.HKY+G+F.BESP40_1" 
+    logfiles.BESP40_1 <- paste0(logpath, model.BESP40_1, ".", seeds, ".log") 
+       
+    # Read and combine chains
+    mcmc.trace.BESP40_1 <- readLog(logfiles.BESP40_1, burnin=burnin)
+    mcmc.trace.BESP40_1 <- window(mcmc.trace.BESP40_1, thin=thinning*thin(mcmc.trace.BESP40_1)) 
+    mcmc.combined.BESP40_1 <- mcmc(as.matrix(mcmc.trace.BESP40_1, iters = FALSE, chains = FALSE))
+    
+    popSizes.BESP40_1        <- getLogFileSubset(mcmc.combined.BESP40_1, "PopSizes")   
+    popSizeTimes.BESP40_1    <- getLogFileSubset(mcmc.combined.BESP40_1, "PopSizeChangeTimes")
+    popSizesGridded.BESP40_1 <- mcmc(rskylinetools::reconstructBackwardSkylineSlow(popSizes.BESP40_1, popSizeTimes.BESP40_1, gridTimes))
+    
+    sampIntensities.BESP40_1    <- getLogFileSubset(mcmc.combined.BESP40_1, "SamplingIntensity$")
+    
+    # Check convergence
+    par(mar=c(3,5,1,0)+0.1, cex=0.6)
+    mcmc.nonstat.BESP40_1     <- checkESS(mcmc.combined.BESP40_1,   cutoff=ESSlimit, ignored=c(varnames(mcmc.trace.BESP40_1)[27:(nvar(mcmc.trace.BESP40_1)-2)]), 
+                                           plot=TRUE, log='y', ylim=c(1,10000), title="General parameters", plot.grid=TRUE)
+    pop.nonstat.BESP40_1      <- checkESS(popSizes.BESP40_1, cutoff=ESSlimit, 
+                                           plot=TRUE, log='y', ylim=c(1,10000), title="PopSize parameters", plot.grid=TRUE)
+    popgrid.nonstat.BESP40_1  <- checkESS(popSizesGridded.BESP40_1, cutoff=ESSlimit, 
+                                           plot=TRUE, log='y', ylim=c(1,10000), title="Gridded PopSize parameters", plot.grid=TRUE)
+    groups.nonstat.BESP40_1   <- checkESS(getLogFileSubset(mcmc.combined.BESP40_1, "GroupSizes"), cutoff=ESSlimit, 
+                                           plot=TRUE, log='y', ylim=c(1,10000), title="GroupSize parameters", plot.grid=TRUE)
+    
+    writeLog(mcmc.combined.BESP40_1,   paste0(logpath, model.BESP40_1, ".combined.log"))
+    writeLog(popSizesGridded.BESP40_1, paste0(logpath, model.BESP40_1, ".popSizesGridded.combined.log"))
 ```
 
 
@@ -214,7 +221,7 @@ write.table(popSizesGridded.BESP40_1, paste0(logpath, model.BESP40_1, ".popSizes
 
 ```{r convergence.BESP40_12, cache=TRUE, fig.width=3.5, fig.height=2}
 
-    model.BESP40_12    <- "HA.HKY+G+F.BESP40_12"
+    model.BESP40_12    <- "HA.HKY+G+F.BESP40_12" 
     logfiles.BESP40_12 <- paste0(logpath, model.BESP40_12, ".", seeds, ".log")
 
     # Read and combine chains 
@@ -222,7 +229,7 @@ write.table(popSizesGridded.BESP40_1, paste0(logpath, model.BESP40_1, ".popSizes
     mcmc.trace.BESP40_12 <- window(mcmc.trace.BESP40_12, thin=thinning*thin(mcmc.trace.BESP40_12))
     mcmc.combined.BESP40_12 <- mcmc(as.matrix(mcmc.trace.BESP40_12, iters = FALSE, chains = FALSE))
      
-    popSizes.BESP40_12        <- getLogFileSubset(mcmc.combined.BESP40_12, "PopSizes") 
+    popSizes.BESP40_12        <- getLogFileSubset(mcmc.combined.BESP40_12, "PopSizes")   
     popSizeTimes.BESP40_12    <- getLogFileSubset(mcmc.combined.BESP40_12, "PopSizeChangeTimes")
     popSizesGridded.BESP40_12 <- mcmc(rskylinetools::reconstructBackwardSkylineSlow(popSizes.BESP40_12, popSizeTimes.BESP40_12, gridTimes))
     
@@ -242,35 +249,42 @@ write.table(popSizesGridded.BESP40_1, paste0(logpath, model.BESP40_1, ".popSizes
     samp.nonstat.BESP40_12     <- checkESS(sampIntensities.BESP40_12, cutoff=ESSlimit, 
                                  plot=TRUE, log='y', ylim=c(1,10000), title="Sampling intensity parameters", plot.grid=TRUE)
     
-    write.table(mcmc.combined.BESP40_12, paste0(logpath, model.BESP40_12, ".combined.log"), sep="\t", quote = FALSE)
-    write.table(popSizesGridded.BESP40_12, paste0(logpath, model.BESP40_12, ".popSizesGridded.combined.log"), sep="\t", quote = FALSE)
-```
-
-
-## Convergence summary
-
-```{r} 
-
-    df <- data.frame(row.names        = c("BSP 40", "BESP 40/1", "BESP 40/12"), 
-                     pop.nonstat      = c(length(pop.nonstat.BSP40), length(pop.nonstat.BESP40_1), length(pop.nonstat.BESP40_12)), 
-                     pop.lowest       = c(min(pop.nonstat.BSP40), min(pop.nonstat.BESP40_1), min(pop.nonstat.BESP40_12)), 
-                     popgrid.nonstat  = c(length(popgrid.nonstat.BSP40), length(popgrid.nonstat.BESP40_1), length(popgrid.nonstat.BESP40_12)), 
-                     popgrid.lowest   = c(min(popgrid.nonstat.BSP40), min(popgrid.nonstat.BESP40_1), min(popgrid.nonstat.BESP40_12)), 
-                     other.nonstat    = c(length(mcmc.nonstat.BSP40), length(mcmc.nonstat.BESP40_1), length(c(mcmc.nonstat.BESP40_12, samp.nonstat.BESP40_12))), 
-                     other.lowest     = c(min(mcmc.nonstat.BSP40), min(mcmc.nonstat.BESP40_1), min(c(mcmc.nonstat.BESP40_12, samp.nonstat.BESP40_12))))
-  
-    knitr::kable(df, caption = "Number of nonstationary parameters and lowest ESS values for different models and subsets of parameters.")
-
-
+    writeLog(mcmc.combined.BESP40_12,   paste0(logpath, model.BESP40_12, ".combined.log"))
+    writeLog(popSizesGridded.BESP40_12, paste0(logpath, model.BESP40_12, ".popSizesGridded.combined.log"))
 ```
 
 
 
 \clearpage
 
+## Convergence summary
+
+```{r results='asis'} 
+
+    nonstat <- data.frame(row.names = c("PopSize", "Gridded PopSize", "Other parameters"), 
+                          BSP40     = c(length(pop.nonstat.BSP40),     length(popgrid.nonstat.BSP40),     length(mcmc.nonstat.BSP40)),
+                          BESP40_1  = c(length(pop.nonstat.BESP40_1),  length(popgrid.nonstat.BESP40_1),  length(mcmc.nonstat.BESP40_1)),
+                          BESP40_12 = c(length(pop.nonstat.BESP40_12), length(popgrid.nonstat.BESP40_12), length(c(mcmc.nonstat.BESP40_12, samp.nonstat.BESP40_12))))
+    ess     <- data.frame(row.names = c("PopSize", "Gridded PopSize", "Other parameters"), 
+                          BSP40     = c(smin(pop.nonstat.BSP40),     smin(popgrid.nonstat.BSP40),     smin(mcmc.nonstat.BSP40)),
+                          BESP40_1  = c(smin(pop.nonstat.BESP40_1),  smin(popgrid.nonstat.BESP40_1),  smin(mcmc.nonstat.BESP40_1)),
+                          BESP40_12 = c(smin(pop.nonstat.BESP40_12), smin(popgrid.nonstat.BESP40_12), smin(c(mcmc.nonstat.BESP40_12, samp.nonstat.BESP40_12))))
+    colnames(nonstat) <- colnames(ess) <- c("BSP 40", "BESP 40/1", "BESP 40/12")
+    
+    knitr::kable(nonstat, caption = "Number of nonstationary parameters for different models and subsets of parameters.")
+    knitr::kable(ess,     caption = "Lowest ESS values for different models and subsets of parameters.")
+```
+
+
+For checking convergence and combining chains a burn-in of `r burnin*100`% was used, and chains are thinned by a factor of `r thinning`, effectively sampling from the MCMC chains every $`r thin(mcmc.trace.BESP40_12)`$ states and resulting in chains with `r niter(mcmc.combined.BESP40_12)` posterior samples.
+
+For convergence only the general parameters and the gridded population size parameters are important. The logged population size and group size parameters are not always expected to mix well. 
+
+
+
+
+
 # Figures
-
-
 
 ```{r H3N2_trim-results-BESP40_12-vs-BESP40_1-vs-BSP40, fig.width=10, fig.height=7, fig.cap="(A)  Density of sequence sampling dates through time for the alignment of 637 A/H3N2 HA sequences from NY state that we analysed. Blue dots indicate stripcharts of individual samples for each season. The stripchart heights give the number of samples in each season. Grey shading indicates the approximate period of influenza observation in New York state during each season (epidemiological week 40, to week 20 in the next year). Cross-hatched seasons are those where A/H3N2 was not the dominant influenza virus subtype. (B) Median (solid/dotted line) and 95% highest posterior density (HPD) intervals (shaded areas) for the genetic diversity estimates (N_e*tau) through time. The BESP estimate is shown in blue and the BSP estimate is in red. (C) Median (solid line/dotted line) and 95% HPD intervals (shaded areas) of the estimated sampling intensities (beta) for each sampling epoch. The 12-epoch BESP estimates are shown in blue and a single-epoch (density-defined) estimate is in yellow."} 
 
@@ -279,7 +293,7 @@ maxTime   <- 2005.25
 popTimes  <- maxTime - gridTimes
 sampTimes <- maxTime - c(0, sampIntensityTimes.BESP40_12)
 
-HA <- read.csv("../data/H3N2/HA_trim2.csv")
+HA <- read.csv("../data/H3N2/HA_trim.csv")
 HA$season <- factor(paste(round(HA$date)-1,round(HA$date),sep='-'))
 
 logPopSizesHPD.BSP40     <- t(getHPDMedian(log(popSizesGridded.BSP40)))
@@ -356,7 +370,7 @@ maxTime   <- 2005.25
 popTimes  <- maxTime - gridTimes
 sampTimes <- maxTime - c(0, sampIntensityTimes.BESP40_12)
 
-HA <- read.csv("../data/H3N2/HA_trim2.csv")
+HA <- read.csv("../data/H3N2/HA_trim.csv")
 HA$season <- factor(paste(round(HA$date)-1,round(HA$date),sep='-'))
 
 PopSizesHPD.BSP40     <- t(getHPDMedian((popSizesGridded.BSP40)))
@@ -426,6 +440,9 @@ xticks <- 1992:2006
 
 ```
 
+- BESP 40/12 $\beta$: `r round(apply(sampIntensityHPD.BESP40_12, 1, mean),2)` (mean of median and 95\% HPD)
+- BESP 40/1 $\beta$: `r round(sampIntensityHPD.BESP40_1,2)` (median and 95\% HPD)
+
 
 ```{r H3N2_trim-results-BESP40_12-vs-BESP40_1, fig.width=10, fig.height=7, fig.cap="(A)  Density of sequence sampling dates through time for the alignment of 637 A/H3N2 HA sequences from NY state that we analysed. Blue dots indicate stripcharts of individual samples for each season. The stripchart heights give the number of samples in each season. Grey shading indicates the approximate period of influenza observation in New York state during each season (epidemiological week 40, to week 20 in the next year). Cross-hatched seasons are those where A/H3N2 was not the dominant influenza virus subtype. (B) Median (solid/dotted line) and 95% highest posterior density (HPD) intervals (shaded areas) for the genetic diversity estimates (N_e*tau) through time. The 12-epoch BESP estimate is shown in blue and the single-epoch BESP estimate is in yellow. (C) Median (solid line/dotted line) and 95% HPD intervals (shaded areas) of the estimated sampling intensities (beta) for each sampling epoch. The 12-epoch BESP estimates are shown in blue and a single-epoch (density-defined) estimate is in yellow."} 
 
@@ -434,7 +451,7 @@ maxTime   <- 2005.25
 popTimes  <- maxTime - gridTimes
 sampTimes <- maxTime - c(0, sampIntensityTimes.BESP40_12)
 
-HA <- read.csv("../data/H3N2/HA_trim2.csv")
+HA <- read.csv("../data/H3N2/HA_trim.csv")
 HA$season <- factor(paste(round(HA$date)-1,round(HA$date),sep='-'))
 
 logPopSizesHPD.BESP40_1  <- t(getHPDMedian(log(popSizesGridded.BESP40_1)))
@@ -498,6 +515,269 @@ xticks <- 1992:2006
 ```
 
 
+
+```{r H3N2_trim-results-BESP40_12-vs-BSP40, fig.width=10, fig.height=7, fig.cap="(A)  Density of sequence sampling dates through time for the alignment of 637 A/H3N2 HA sequences from NY state that we analysed. Blue dots indicate stripcharts of individual samples for each season. The stripchart heights give the number of samples in each season. Grey shading indicates the approximate period of influenza observation in New York state during each season (epidemiological week 40, to week 20 in the next year). Cross-hatched seasons are those where A/H3N2 was not the dominant influenza virus subtype. (B) Median (solid/dotted line) and 95% highest posterior density (HPD) intervals (shaded areas) for the genetic diversity estimates (N_e*tau) through time. The BESP estimate is shown in blue and the BSP estimate is in red. (C) Median (solid line/dotted line) and 95% HPD intervals (shaded areas) of the estimated sampling intensities (beta) for each sampling epoch. The 12-epoch BESP estimates are shown in blue and a single-epoch (density-defined) estimate is in yellow."} 
+
+set.seed(25)
+maxTime   <- 2005.25
+popTimes  <- maxTime - gridTimes
+sampTimes <- maxTime - c(0, sampIntensityTimes.BESP40_12)
+
+HA <- read.csv("../data/H3N2/HA_trim.csv")
+HA$season <- factor(paste(round(HA$date)-1,round(HA$date),sep='-'))
+
+logPopSizesHPD.BSP40     <- t(getHPDMedian(log(popSizesGridded.BSP40)))
+logPopSizesHPD.BESP40_1  <- t(getHPDMedian(log(popSizesGridded.BESP40_1)))
+logPopSizesHPD.BESP40_12 <- t(getHPDMedian(log(popSizesGridded.BESP40_12)))
+
+sampIntensityHPD.BESP40_1  <- getHPDMedian(mcmc.combined.BESP40_1[,"SamplingIntensity"])
+sampIntensityHPD.BESP40_12 <- t(getHPDMedian(sampIntensities.BESP40_12))
+
+par(mfrow=c(3,1), mar=c(4,6,0.5,25)+0.1)
+xticks <- 1992:2006
+
+# Samples
+
+    #density_1mo <- density(HA$date, bw=(1/12), from=1991, to=2008)
+    sampleMax <- 120
+    ylims     <- c(0, sampleMax)
+    scaling   <- ylims[2]/sampleMax   # = 1
+    
+    drawPlotAxes(xticks, ylims, side=2, ylab="Samples/season", plotNr="A", plotXAxis=TRUE) 
+    
+    # Plot samples and density
+    #polygon(density_1mo, col=mPal(oxCols$red2,0.25), border=NA)
+    
+    for (season in levels(HA$season)) {
+        dates <- HA$date[HA$season == season]
+        n     <- length(dates)*scaling
+
+        points(dates[1], n, pch=20, col=mPal(oxCols$blue1, 0.5))
+        dates <- dates[-1]
+        points(dates, jitter(rep(n/2,length(dates)), amount=max(0.05,n/2)), pch=20, col=mPal(oxCols$blue1, 0.5))
+      
+        #text(x=as.numeric(strsplit(season, "-")[[1]][2]), y=max(25,n+10), labels = paste0("(",n,")"), srt=90, col=mPal(oxCols$red2))
+        #lines(range(dates), rep(n,2),  col=mPal(oxCols$red1, 0.5))
+    }
+    #axis(1,at = sampTimes, labels = NA, lwd=0, lwd.ticks=1, tcl=0.5)
+
+# PopSize skyline
+
+    ylims  <- c(log(0.1), max(log(100), max(logPopSizesHPD.BESP40_12)))
+    drawPlotAxes(xticks, ylims, ylab=expression("N"[e]~tau), plotNr="B", plotXAxis=TRUE, plotYAxis=FALSE) 
+    plotLogYAxis(exp(ylims))
+
+    # Skylines
+    plotSkyline(popTimes, logPopSizesHPD.BSP40,     add=TRUE, new=FALSE, fill=mPal(oxCols$red2,0.25), col=mPal(oxCols$red2), lty=3)
+    # plotSkyline(popTimes, logPopSizesHPD.BESP40_1,  add=TRUE, new=FALSE, fill=mPal(oxCols$orange3,0.5), col=mPal(oxCols$orange1), lty=3)
+    plotSkyline(popTimes, logPopSizesHPD.BESP40_12, add=TRUE, new=FALSE, fill=mPal(oxCols$blue1, 0.5), col=mPal(oxCols$oxblue))   
+    
+    legend("topright", horiz=FALSE, inset=c(-0.32,0), border=c(mPal(oxCols$oxblue), mPal(oxCols$red2)), fill = c(mPal(oxCols$blue1, 0.5), mPal(oxCols$red2, 0.25)), 
+           legend=c("BESP (12 epochs)", "BSP"), bty='n', xpd=TRUE, cex=1.5)
+
+    
+# Sampling intensity skyline
+
+    ylims <- c(0, 1.05*max(sampIntensityHPD.BESP40_12))
+    drawPlotAxes(xticks, ylims, ylab=expression(beta), plotNr="C", plotXAxis=TRUE) 
+
+    # Skylines
+    plotSkyline(sampTimes, sampIntensityHPD.BESP40_12, type='step', add=TRUE, new=FALSE,  fill=mPal(oxCols$blue1,0.5), col=mPal(oxCols$oxblue))
+    #rect(min(sampTimes), sampIntensityHPD.BESP40_1["lower"], max(sampTimes), sampIntensityHPD.BESP40_1["upper"], col=mPal(oxCols$orange3,0.5), border=NA)
+    #lines(range(sampTimes), rep(sampIntensityHPD.BESP40_1["med"],2), col=mPal(oxCols$orange1), lty=3)
+    
+    legend("topright", horiz=FALSE, inset=c(-0.32,0), border=c(mPal(oxCols$oxblue), mPal(oxCols$orange1)), fill = c(mPal(oxCols$blue1, 0.5), mPal(oxCols$orange3, 0.5)), 
+           legend=c("BESP (12 epochs)", "BESP (1 epoch)"), bty='n', xpd=TRUE, cex=1.5)
+    
+
+```
+
+
+
+
+```{r H3N2_trim-results-BESP40_12, fig.width=10, fig.height=7, eval=FALSE} 
+
+set.seed(25)
+maxTime   <- 2005.25
+popTimes  <- maxTime - gridTimes
+sampTimes <- maxTime - c(0, sampIntensityTimes.BESP40_12)
+
+HA <- read.csv("../data/H3N2/HA_trim.csv")
+HA$season <- factor(paste(round(HA$date)-1,round(HA$date),sep='-'))
+
+logPopSizesHPD.BESP40_12 <- t(getHPDMedian(log(popSizesGridded.BESP40_12)))
+
+sampIntensityHPD.BESP40_12 <- t(getHPDMedian(sampIntensities.BESP40_12))
+
+par(mfrow=c(3,1), mar=c(4,6,0.5,25)+0.1)
+xticks <- 1992:2006
+
+# Samples
+
+    #density_1mo <- density(HA$date, bw=(1/12), from=1991, to=2008)
+    sampleMax <- 120
+    ylims     <- c(0, sampleMax)
+    scaling   <- ylims[2]/sampleMax   # = 1
+    
+    drawPlotAxes(xticks, ylims, side=2, ylab="Samples/season", plotNr="A", plotXAxis=TRUE) 
+    
+    # Plot samples and density
+    #polygon(density_1mo, col=mPal(oxCols$red2,0.25), border=NA)
+    
+    for (season in levels(HA$season)) {
+        dates <- HA$date[HA$season == season]
+        n     <- length(dates)*scaling
+
+        points(dates[1], n, pch=20, col=mPal(oxCols$blue1, 0.5))
+        dates <- dates[-1]
+        points(dates, jitter(rep(n/2,length(dates)), amount=max(0.05,n/2)), pch=20, col=mPal(oxCols$blue1, 0.5))
+      
+        #text(x=as.numeric(strsplit(season, "-")[[1]][2]), y=max(25,n+10), labels = paste0("(",n,")"), srt=90, col=mPal(oxCols$red2))
+        #lines(range(dates), rep(n,2),  col=mPal(oxCols$red1, 0.5))
+    }
+    #axis(1,at = sampTimes, labels = NA, lwd=0, lwd.ticks=1, tcl=0.5)
+
+# PopSize skyline
+
+    ylims  <- c(log(0.1), max(log(100), max(logPopSizesHPD.BESP40_12)))
+    drawPlotAxes(xticks, ylims, ylab=expression("N"[e]~tau), plotNr="B", plotXAxis=TRUE, plotYAxis=FALSE) 
+    plotLogYAxis(exp(ylims))
+
+    # Skylines
+    plotSkyline(popTimes, logPopSizesHPD.BESP40_12, add=TRUE, new=FALSE, fill=mPal(oxCols$blue1, 0.5), col=mPal(oxCols$oxblue))   
+    
+    
+# Sampling intensity skyline
+
+    ylims <- c(0, 1.05*max(sampIntensityHPD.BESP40_12))
+    drawPlotAxes(xticks, ylims, ylab=expression(beta), plotNr="C", plotXAxis=TRUE) 
+
+    # Skylines
+    plotSkyline(sampTimes, sampIntensityHPD.BESP40_12, type='step', add=TRUE, new=FALSE,  fill=mPal(oxCols$blue1,0.5), col=mPal(oxCols$oxblue))
+
+```
+
+
+```{r H3N2_trim-results-BESP40_1, fig.width=10, fig.height=7, eval=FALSE} 
+
+set.seed(25)
+maxTime   <- 2005.25
+popTimes  <- maxTime - gridTimes
+sampTimes <- maxTime - c(0, sampIntensityTimes.BESP40_12)
+
+HA <- read.csv("../data/H3N2/HA_trim.csv")
+HA$season <- factor(paste(round(HA$date)-1,round(HA$date),sep='-'))
+
+logPopSizesHPD.BESP40_1  <- t(getHPDMedian(log(popSizesGridded.BESP40_1)))
+
+sampIntensityHPD.BESP40_1  <- getHPDMedian(mcmc.combined.BESP40_1[,"SamplingIntensity"])
+
+par(mfrow=c(3,1), mar=c(4,6,0.5,25)+0.1)
+xticks <- 1992:2006
+
+# Samples
+
+    #density_1mo <- density(HA$date, bw=(1/12), from=1991, to=2008)
+    sampleMax <- 120
+    ylims     <- c(0, sampleMax)
+    scaling   <- ylims[2]/sampleMax   # = 1
+    
+    drawPlotAxes(xticks, ylims, side=2, ylab="Samples/season", plotNr="A", plotXAxis=TRUE) 
+    
+    # Plot samples and density
+    #polygon(density_1mo, col=mPal(oxCols$red2,0.25), border=NA)
+    
+    for (season in levels(HA$season)) {
+        dates <- HA$date[HA$season == season]
+        n     <- length(dates)*scaling
+
+        points(dates[1], n, pch=20, col=mPal(oxCols$blue1, 0.5))
+        dates <- dates[-1]
+        points(dates, jitter(rep(n/2,length(dates)), amount=max(0.05,n/2)), pch=20, col=mPal(oxCols$blue1, 0.5))
+      
+        #text(x=as.numeric(strsplit(season, "-")[[1]][2]), y=max(25,n+10), labels = paste0("(",n,")"), srt=90, col=mPal(oxCols$red2))
+        #lines(range(dates), rep(n,2),  col=mPal(oxCols$red1, 0.5))
+    }
+    #axis(1,at = sampTimes, labels = NA, lwd=0, lwd.ticks=1, tcl=0.5)
+
+# PopSize skyline
+
+    ylims  <- c(log(0.1), max(log(100), max(logPopSizesHPD.BESP40_12)))
+    drawPlotAxes(xticks, ylims, ylab=expression("N"[e]~tau), plotNr="B", plotXAxis=TRUE, plotYAxis=FALSE) 
+    plotLogYAxis(exp(ylims))
+
+    # Skylines
+    plotSkyline(popTimes, logPopSizesHPD.BESP40_1,  add=TRUE, new=FALSE, fill=mPal(oxCols$orange3,0.5), col=mPal(oxCols$orange1), lty=3)
+    
+    
+# Sampling intensity skyline
+
+    ylims <- c(0, 1.05*max(sampIntensityHPD.BESP40_12))
+    drawPlotAxes(xticks, ylims, ylab=expression(beta), plotNr="C", plotXAxis=TRUE) 
+
+    # Skylines
+    rect(min(sampTimes), sampIntensityHPD.BESP40_1["lower"], max(sampTimes), sampIntensityHPD.BESP40_1["upper"], col=mPal(oxCols$orange3,0.5), border=NA)
+    lines(range(sampTimes), rep(sampIntensityHPD.BESP40_1["med"],2), col=mPal(oxCols$orange1), lty=3)
+    
+```
+
+
+```{r H3N2_trim-results-BSP40, fig.width=10, fig.height=7, eval=FALSE} 
+
+set.seed(25)
+maxTime   <- 2005.25
+popTimes  <- maxTime - gridTimes
+sampTimes <- maxTime - c(0, sampIntensityTimes.BESP40_12)
+
+HA <- read.csv("../data/H3N2/HA_trim.csv")
+HA$season <- factor(paste(round(HA$date)-1,round(HA$date),sep='-'))
+
+logPopSizesHPD.BSP40     <- t(getHPDMedian(log(popSizesGridded.BSP40)))
+
+par(mfrow=c(3,1), mar=c(4,6,0.5,25)+0.1)
+xticks <- 1992:2006
+
+# Samples
+
+    density_1mo <- density(HA$date, bw=(1/12), from=1991, to=2008)
+    sampleMax <- 120
+    ylims     <- c(0, sampleMax)
+    scaling   <- ylims[2]/sampleMax   # = 1
+    
+    drawPlotAxes(xticks, ylims, side=2, ylab="Samples/season", plotNr="A", plotXAxis=TRUE) 
+    
+    # Plot samples and density
+    for (season in levels(HA$season)) {
+        dates <- HA$date[HA$season == season]
+        n     <- length(dates)*scaling
+
+        points(dates[1], n, pch=20, col=mPal(oxCols$blue1, 0.5))
+        dates <- dates[-1]
+        points(dates, jitter(rep(n/2,length(dates)), amount=max(0.05,n/2)), pch=20, col=mPal(oxCols$blue1, 0.5))
+      
+        #text(x=as.numeric(strsplit(season, "-")[[1]][2]), y=max(25,n+10), labels = paste0("(",n,")"), srt=90, col=mPal(oxCols$red2))
+        #lines(range(dates), rep(n,2),  col=mPal(oxCols$red1, 0.5))
+    }
+    density_1mo$y <- (density_1mo$y*sampleMax*0.8) / max(density_1mo$y)
+    polygon(density_1mo, col=mPal(oxCols$red2,0.25), border=NA)
+
+    #axis(1,at = sampTimes, labels = NA, lwd=0, lwd.ticks=1, tcl=0.5)
+
+# PopSize skyline
+
+    ylims  <- c(log(0.1), max(log(100), max(logPopSizesHPD.BESP40_12)))
+    drawPlotAxes(xticks, ylims, ylab=expression("N"[e]~tau), plotNr="B", plotXAxis=TRUE, plotYAxis=FALSE) 
+    plotLogYAxis(exp(ylims))
+
+    # Skylines
+    plotSkyline(popTimes, logPopSizesHPD.BSP40,     add=TRUE, new=FALSE, fill=mPal(oxCols$red2,0.25), col=mPal(oxCols$red2), lty=3)
+
+# Sampling intensity skyline
+
+    plot(1,type='n',axes=FALSE,xlab="",ylab="")
+    
+
+```
 
 ```{r H3N2_trim-results-groupSizes, fig.width=10, fig.height=7, fig.cap="Population size segments for the alignment of 637 A/H3N2 HA sequences from NY state, as estimated under the 12-epoch BESP (A), single-epoch BESP (B) and BSP (C), with p = 40.	Median posterior estimates of segments (t_{j-1}-t_j) are shown in blue. HPD intervals for the segment end-times are indicated by red arrows. Red shading shows the kernel density estimate of the posterior segment times (t_j). Grey shading indicates the approximate period of influenza observation in New York state during each season (epidemiological week 40, to week 20 in the next year). Cross-hatched seasons are those where A/H3N2 was not the dominant influenza virus subtype."} 
 
@@ -578,11 +858,63 @@ xticks <- 1992:2006
 ```
 
 
-```{r H3N2_trim-results-BESP40_12-MCCtree, fig.width=7.5, fig.height=9, fig.cap="MCC tree of the alignment of 637 A/H3N2 HA sequences estimated under the 12-epoch BESP. Grey shading indicates the approximate period of influenza observation in New York state during each season (epidemiological week 40, to week 20 in the next year). Cross-hatched seasons are those where A/H3N2 was not the dominant influenza virus subtype."} 
+```{r H3N2_trim-results-BESP40_12-MCCtree, fig.width=7.5, fig.height=9, fig.cap="MCC tree of the alignment of 637 A/H3N2 HA sequences estimated under the 12-epoch BESP. Grey shading indicates the approximate period of influenza observation in New York state during each season (epidemiological week 40, to week 20 in the next year). Cross-hatched seasons are those where A/H3N2 was not the dominant influenza virus subtype.", eval=TRUE} 
 
     model.BESP40_12    <- "HA.HKY+G+F.BESP40_12"
     phylo <- read.nexus(paste0(logpath, model.BESP40_12, ".combined30_30000.MCC.tree"))
-    tmrca <- max(getx(phylo, sersampling = TRUE)[,1])
+    tmrca <- max(getBranchingTimes(phylo))
+    maxTime    <- 2005.25
+    
+    xticks     <- 1992:2006
+    
+    #par(mfrow=c(1,1), mar=c(4,6,0.5,25)+0.1)
+    drawPlotAxes(xticks, ylims=c(0,1), ylab="", plotNr="", plotXAxis=TRUE, plotYAxis=FALSE, mirror=FALSE) 
+    
+    # Set x-axis limits so that tMRCA=0 and maxTime = tMRCA (on calendar times)
+    k     <- phylo$Nnode
+    ylims <- c(-0.04*k, 1.04*k)
+    x1    <- min(xticks)-(maxTime-tmrca)
+    x2    <- tmrca + (max(xticks)- maxTime)
+    
+    par(new=TRUE)
+    plot(ladderize(phylo, right=TRUE),  show.tip.label=FALSE, direction="rightwards", edge.width=0.5, edge.color=mPal(oxCols$oxblue),
+         xaxs='i', yaxs='i', xpd=TRUE, y.lim=ylims, x.lim=c(x1, x2))
+    par(new=FALSE)
+
+
+```
+
+```{r H3N2_trim-results-BESP40_1-MCCtree, fig.width=7.5, fig.height=9, fig.cap="MCC tree of the alignment of 637 A/H3N2 HA sequences estimated under the single-epoch BESP. Grey shading indicates the approximate period of influenza observation in New York state during each season (epidemiological week 40, to week 20 in the next year). Cross-hatched seasons are those where A/H3N2 was not the dominant influenza virus subtype.", eval=TRUE} 
+
+    model.BESP40_1    <- "HA.HKY+G+F.BESP40_1"
+    phylo <- read.nexus(paste0(logpath, model.BESP40_1, ".combined30_30000.MCC.tree"))
+    tmrca <- max(getBranchingTimes(phylo))
+    maxTime    <- 2005.25
+    
+    xticks     <- 1992:2006
+    
+    #par(mfrow=c(1,1), mar=c(4,6,0.5,25)+0.1)
+    drawPlotAxes(xticks, ylims=c(0,1), ylab="", plotNr="", plotXAxis=TRUE, plotYAxis=FALSE, mirror=FALSE) 
+    
+    # Set x-axis limits so that tMRCA=0 and maxTime = tMRCA (on calendar times)
+    k     <- phylo$Nnode
+    ylims <- c(-0.04*k, 1.04*k)
+    x1    <- min(xticks)-(maxTime-tmrca)
+    x2    <- tmrca + (max(xticks)- maxTime)
+    
+    par(new=TRUE)
+    plot(ladderize(phylo, right=TRUE),  show.tip.label=FALSE, direction="rightwards", edge.width=0.5, edge.color=mPal(oxCols$oxblue),
+         xaxs='i', yaxs='i', xpd=TRUE, y.lim=ylims, x.lim=c(x1, x2))
+    par(new=FALSE)
+
+
+```
+
+```{r H3N2_trim-results-BSP40-MCCtree, fig.width=7.5, fig.height=9, fig.cap="MCC tree of the alignment of 637 A/H3N2 HA sequences estimated under the single-epoch BESP. Grey shading indicates the approximate period of influenza observation in New York state during each season (epidemiological week 40, to week 20 in the next year). Cross-hatched seasons are those where A/H3N2 was not the dominant influenza virus subtype.", eval=TRUE} 
+
+    model.BSP40    <- "HA.HKY+G+F.BSP40"
+    phylo <- read.nexus(paste0(logpath, model.BSP40, ".combined30_30000.MCC.tree"))
+    tmrca <- max(getBranchingTimes(phylo))
     maxTime    <- 2005.25
     
     xticks     <- 1992:2006
@@ -609,7 +941,7 @@ xticks <- 1992:2006
 
 # Session info
 
-```{r sessionInfo}
+```{r sessionInfo, results='markup'}
     sessionInfo()
 ```
 
