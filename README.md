@@ -6,7 +6,7 @@
 
 ## Summary
 
-This repository contains the raw data, configuration files and scripts necessary to reproduce the BESP analyses presented in [https://www.biorxiv.org/content/10.1101/686378v1.abstract](https://www.biorxiv.org/content/10.1101/686378v1.abstract). Some of the scripts may need some adjustment depending on the local setup. 
+This repository contains the raw data, configuration files and scripts necessary to reproduce the BESP analyses presented in [https://doi.org/10.1093/molbev/msaa016](https://doi.org/10.1093/molbev/msaa016). Some of the scripts may need some adjustment depending on the local setup. 
 
 ### Abstract
 
