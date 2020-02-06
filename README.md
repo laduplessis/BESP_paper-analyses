@@ -1,8 +1,8 @@
 # Jointly inferring the dynamics of population size and sampling intensity from molecular sequences: BESP analyses
 
-[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.3649734.svg)](https://doi.org/10.5281/zenodo.3649734)
-
 ### KV Parag, L du Plessis and OG Pybus
+
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.3649734.svg)](https://doi.org/10.5281/zenodo.3649734)
 
 ## Summary
 
